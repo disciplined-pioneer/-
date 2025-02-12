@@ -181,7 +181,7 @@ async def create_report(user_tg_id: int) -> str:
     # return pdf_file_path
 
     for check in checks:
-        await check.update(user=True)
+        await check.update(used=True)
 
     return file_path
 
