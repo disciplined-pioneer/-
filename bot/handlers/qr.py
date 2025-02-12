@@ -25,13 +25,13 @@ async def send_qr(call: CallbackQuery, state: FSMContext):
     :param call: CallbackQuery
     :param state: FSMContext
     """
-    await state.clear()
     last_msg = await call.message.edit_text(
         text=tqr.send_qr_text,
         reply_markup=thelpers.comeback_ikb('start')
     )
     await state.set_state(tqr.QRState.qr)
     await state.update_data(last_msg=last_msg)
+
 
 @router.message(tqr.QRState.qr)
 async def get_qr(message: Message, state: FSMContext):
@@ -75,7 +75,6 @@ async def manual_filling(call: CallbackQuery, state: FSMContext):
     :param call: CallbackQuery
     :param state: FSMContext
     """
-    await state.clear()
     last_msg = await call.message.edit_text(
         text=tqr.send_date_text,
         reply_markup=thelpers.comeback_ikb('send_qr')
