@@ -26,11 +26,12 @@ async def send_qr(call: CallbackQuery, state: FSMContext):
     :param state: FSMContext
     """
     await state.clear()
-    await call.message.edit_text(
+    last_msg = await call.message.edit_text(
         text=tqr.send_qr_text,
         reply_markup=thelpers.comeback_ikb('start')
     )
     await state.set_state(tqr.QRState.qr)
+    await state.update_data(last_msg=last_msg)
 
 @router.message(tqr.QRState.qr)
 async def get_qr(message: Message, state: FSMContext):
@@ -40,7 +41,6 @@ async def get_qr(message: Message, state: FSMContext):
     :param state: FSMContext
     """
     await message.delete()
-    await state.clear()
     state_data = await state.get_data()
 
     if not message.photo:
