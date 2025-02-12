@@ -10,14 +10,14 @@ from datetime import datetime
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.state import StatesGroup, State
-from qreader import QReader
+# from qreader import QReader
 
 from integrations.check_info import NalogRuPython
 from bot.keyboards.inline import expenses, to_start, fill_check, check_failed, input_check_back1, input_check_back2, \
     input_check_back3, input_check_back4, input_check_back5, input_check_back6
 
 router = Router()
-qreader = QReader()
+# qreader = QReader()
 
 
 go_back = [
