@@ -25,12 +25,17 @@ async def send_qr(call: CallbackQuery, state: FSMContext):
     :param call: CallbackQuery
     :param state: FSMContext
     """
+    state_data = await state.get_data()
+    await state.clear()
     last_msg = await call.message.edit_text(
         text=tqr.send_qr_text,
         reply_markup=thelpers.comeback_ikb('start')
     )
     await state.set_state(tqr.QRState.qr)
-    await state.update_data(last_msg=last_msg)
+    await state.update_data(
+        last_msg=last_msg,
+        expense_type=state_data['expense_type']
+    )
 
 
 @router.message(tqr.QRState.qr)
@@ -75,12 +80,17 @@ async def manual_filling(call: CallbackQuery, state: FSMContext):
     :param call: CallbackQuery
     :param state: FSMContext
     """
+    state_data = await state.get_data()
+    await state.clear()
     last_msg = await call.message.edit_text(
         text=tqr.send_date_text,
         reply_markup=thelpers.comeback_ikb('send_qr')
     )
     await state.set_state(tqr.QRState.date)
-    await state.update_data(last_msg=last_msg)
+    await state.update_data(
+        last_msg=last_msg,
+        expense_type=state_data['expense_type']
+    )
 
 
 @router.message(F.text, tqr.QRState.date)
@@ -312,6 +322,7 @@ async def create_report_call(call: CallbackQuery, state: FSMContext):
     )
 
     os.remove(path)
+    await state.clear()
 
 
 @router.callback_query(F.data == 'confirm_incorrect_data')
