@@ -156,7 +156,7 @@ class Check(Base, ModelAdmin):
     __tablename__ = 'check'
 
     id: Mapped[intpk]
-    user_id: Mapped[int] = ForeignKey('users.id')
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     date: Mapped[datetime]
     fd: Mapped[str]
     fn: Mapped[str]
