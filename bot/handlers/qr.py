@@ -31,7 +31,6 @@ async def send_qr(call: CallbackQuery, state: FSMContext):
     )
     await state.set_state(tqr.QRState.qr)
 
-
 @router.message(tqr.QRState.qr)
 async def get_qr(message: Message, state: FSMContext):
     """
@@ -262,12 +261,12 @@ async def confirm_check(call: CallbackQuery, state: FSMContext):
             fd=state_data['check_data']['request']['manual']['fd'],
             fn=state_data['check_data']['request']['manual']['fn'],
             fp=state_data['check_data']['request']['manual']['fp'],
-            kkt_reg_id=state_data['check_data']['data']['json']['kktRegId'],
-            inn=state_data['check_data']['data']['json']['userInn'],
-            salesman=state_data['check_data']['data']['json']['user'],
-            operator=state_data['check_data']['data']['json']['operator'],
-            address=state_data['check_data']['data']['json']['metadata']['address'],
-            sum=state_data['check_data']['data']['json']['totalSum'],
+            kkt_reg_id=state_data['check_data']['data']['json'].get('kktRegId'),
+            inn=state_data['check_data']['data']['json'].get('userInn'),
+            salesman=state_data['check_data']['data']['json'].get('user'),
+            operator=state_data['check_data']['data']['json'].get('operator'),
+            address=state_data['check_data']['data']['json']['metadata'].get('address'),
+            sum=state_data['check_data']['data']['json'].get('totalSum'),
             nds=get_nds(state_data['check_data']),
             type=state_data['expense_type']
         )

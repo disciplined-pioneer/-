@@ -101,12 +101,12 @@ def incorrect_data_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.add(
         InlineKeyboardButton(
-            text='✅Заполнить данные ',
-            callback_data='confirm_incorrect_data'
+            text='Заполнить данные ',
+            callback_data='check_manual_filling'
         ),
         InlineKeyboardButton(
-            text='⬅️Назад',
-            callback_data='send_qr'
+            text='Сформировать отчет',
+            callback_data='confirm_incorrect_data'
         ),
         InlineKeyboardButton(
             text='↩️ Главное меню',
