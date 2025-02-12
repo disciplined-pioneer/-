@@ -26,7 +26,6 @@ async def main():
     # data = await CheckApi().info_by_img(url)
     # print(data)
 
-    locale.setlocale(locale.LC_TIME, 'ru_RU.UTF-8')
     await init_postgres()
     await bot.set_my_commands(
         commands=settings.bot.COMMANDS,
