@@ -15,7 +15,7 @@ from db.models.models import Check, User
 async def create_report(user_tg_id: int) -> str:
     user = await User.get(tg_id=user_tg_id)
     checks = await Check.filter(
-        # user_id=user.id, !!
+        user_id=user.id,
         used=False
     )
     print('len(checks)', len(checks))
@@ -179,6 +179,9 @@ async def create_report(user_tg_id: int) -> str:
     # os.remove(html_file_path)
 
     # return pdf_file_path
+
+    for check in checks:
+        await check.update(user=True)
 
     return file_path
 
