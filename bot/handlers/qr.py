@@ -25,6 +25,7 @@ async def send_qr(call: CallbackQuery, state: FSMContext):
     :param call: CallbackQuery
     :param state: FSMContext
     """
+    await state.clear()
     await call.message.edit_text(
         text=tqr.send_qr_text,
         reply_markup=thelpers.comeback_ikb('start')
@@ -39,6 +40,7 @@ async def get_qr(message: Message, state: FSMContext):
     :param state: FSMContext
     """
     await message.delete()
+    await state.clear()
     state_data = await state.get_data()
 
     if not message.photo:
@@ -73,6 +75,7 @@ async def manual_filling(call: CallbackQuery, state: FSMContext):
     :param call: CallbackQuery
     :param state: FSMContext
     """
+    await state.clear()
     last_msg = await call.message.edit_text(
         text=tqr.send_date_text,
         reply_markup=thelpers.comeback_ikb('send_qr')
