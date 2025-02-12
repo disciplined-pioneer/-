@@ -294,10 +294,13 @@ async def confirm_check(call: CallbackQuery, state: FSMContext):
             type=state_data['expense_type']
         )
 
-    await call.message.edit_text(
-        text=tcommands.start_text,
-        reply_markup=tcommands.start_ikb()
-    )
+    try:
+        await call.message.edit_text(
+            text=tcommands.start_text,
+            reply_markup=tcommands.start_ikb()
+        )
+    except:
+        pass
     await state.clear()
 
 
