@@ -36,7 +36,7 @@ async def create_report(user_tg_id: int) -> str:
     rub_amount = format_amount(amount)
     print('str(amount).split()', str(amount).split('.'))
     cop_amount = str(amount).split('.')[1]
-    text_amount = f'{num2words(int(rub_amount), lang='ru')} рублей {cop_amount} копеек ({rub_amount} руб. {cop_amount} коп.)'
+    text_amount = f'{num2words(int(amount), lang='ru')} рублей {cop_amount} копеек ({rub_amount} руб. {cop_amount} коп.)'
 
     # Отчет о сумме
     sheet.cell(row=9, column=18).value = rub_amount
