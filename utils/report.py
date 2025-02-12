@@ -171,14 +171,16 @@ async def create_report(user_tg_id: int) -> str:
 
     workbook.save(file_path)
 
-    df = pd.read_excel(file_path)
-    df.to_html(html_file_path)
-    pdfkit.from_file(html_file_path, pdf_file_path)
+    # df = pd.read_excel(file_path)
+    # df.to_html(html_file_path)
+    # pdfkit.from_file(html_file_path, pdf_file_path)
+    #
+    # os.remove(file_path)
+    # os.remove(html_file_path)
 
-    os.remove(file_path)
-    os.remove(html_file_path)
+    # return pdf_file_path
 
-    return pdf_file_path
+    return file_path
 
 
 def format_amount(amount: float):
