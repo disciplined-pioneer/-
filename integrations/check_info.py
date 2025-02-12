@@ -1,11 +1,8 @@
 import os
-import json
 from datetime import datetime
-from time import sleep
 
 import aiohttp
 import requests
-from aiogram.client import bot
 from dotenv import load_dotenv
 
 from settings import settings

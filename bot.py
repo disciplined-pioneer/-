@@ -8,9 +8,7 @@ from aiogram.types import BotCommandScopeDefault
 from bot.handlers import routers
 from core.bot import bot
 from db.crud.base import init_postgres
-from integrations.check_info import CheckApi
 from settings import settings
-from utils.report import create_report
 
 logging.basicConfig(level=logging.INFO)
 
