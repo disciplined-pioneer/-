@@ -1,7 +1,7 @@
 import re
-import cv2
-import io
-import numpy as np
+# import cv2
+# import io
+# import numpy as np
 
 from aiogram import F, Router, Bot
 from decimal import Decimal
@@ -390,42 +390,42 @@ async def handle_post(message: Message, state: FSMContext):
         await message.answer('Неподдерживаемый формат, пожалуйста, отправьте фото')
         return
 
-    loading = await message.answer('Пожалуйста подождите, идет получение данных о чеке...')
-    check_photo = message.photo[-1]
-    bot = message.bot
-    photo_bytes = io.BytesIO()
-    await bot.download(check_photo.file_id, photo_bytes)
-    photo_bytes.seek(0)
-    nparr = np.frombuffer(photo_bytes.read(), np.uint8)
-    image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    reader = QReader()
-    decoded_text = reader.detect_and_decode(image=image)
-
-    if not decoded_text or not decoded_text[0]:
-        try:
-            await message.edit_text("QR-код не распознан.\nМожете заполнить данные о чеке самостоятельно", reply_markup=fill_check.as_markup())
-        except Exception:
-            await bot.delete_message(chat_id=loading.chat.id, message_id=loading.message_id)
-            await message.answer("QR-код не распознан.\nМожете заполнить данные о чеке самостоятельно", reply_markup=fill_check.as_markup())
-        finally:
-            return
-    else:
-        try:
-            client = NalogRuPython()
-            ticket = client.get_ticket(decoded_text[0])
-            ans = check_info(ticket)
-            await bot.delete_message(chat_id=loading.chat.id, message_id=loading.message_id)
-            data = await state.get_data()
-            report_id = data["report"] if 'report' in data else message.message_id - 90
-            await cmd_clear(message, bot, report_id)
-            report = await message.answer(ans, parse_mode="HTML", reply_markup=to_start.as_markup())
-            await state.update_data(report=report.message_id)
-        except Exception as e:
-            try:
-                await message.edit_text("Не удалось получить информацию о чеке\nМожете заполнить данные о чеке самостоятельно", reply_markup=fill_check.as_markup())
-            except Exception:
-                await bot.delete_message(chat_id=loading.chat.id, message_id=loading.message_id)
-                await message.answer("Не удалось получить информацию о чеке\nМожете заполнить данные о чеке самостоятельно", reply_markup=fill_check.as_markup())
-            finally:
-                print(e)
-                return
+    # loading = await message.answer('Пожалуйста подождите, идет получение данных о чеке...')
+    # check_photo = message.photo[-1]
+    # bot = message.bot
+    # photo_bytes = io.BytesIO()
+    # await bot.download(check_photo.file_id, photo_bytes)
+    # photo_bytes.seek(0)
+    # nparr = np.frombuffer(photo_bytes.read(), np.uint8)
+    # image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    # reader = QReader()
+    # decoded_text = reader.detect_and_decode(image=image)
+    #
+    # if not decoded_text or not decoded_text[0]:
+    #     try:
+    #         await message.edit_text("QR-код не распознан.\nМожете заполнить данные о чеке самостоятельно", reply_markup=fill_check.as_markup())
+    #     except Exception:
+    #         await bot.delete_message(chat_id=loading.chat.id, message_id=loading.message_id)
+    #         await message.answer("QR-код не распознан.\nМожете заполнить данные о чеке самостоятельно", reply_markup=fill_check.as_markup())
+    #     finally:
+    #         return
+    # else:
+    #     try:
+    #         client = NalogRuPython()
+    #         ticket = client.get_ticket(decoded_text[0])
+    #         ans = check_info(ticket)
+    #         await bot.delete_message(chat_id=loading.chat.id, message_id=loading.message_id)
+    #         data = await state.get_data()
+    #         report_id = data["report"] if 'report' in data else message.message_id - 90
+    #         await cmd_clear(message, bot, report_id)
+    #         report = await message.answer(ans, parse_mode="HTML", reply_markup=to_start.as_markup())
+    #         await state.update_data(report=report.message_id)
+    #     except Exception as e:
+    #         try:
+    #             await message.edit_text("Не удалось получить информацию о чеке\nМожете заполнить данные о чеке самостоятельно", reply_markup=fill_check.as_markup())
+    #         except Exception:
+    #             await bot.delete_message(chat_id=loading.chat.id, message_id=loading.message_id)
+    #             await message.answer("Не удалось получить информацию о чеке\nМожете заполнить данные о чеке самостоятельно", reply_markup=fill_check.as_markup())
+    #         finally:
+    #             print(e)
+    #             return
