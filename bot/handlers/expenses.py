@@ -350,6 +350,7 @@ async def input_check_load_data(message: Message, state: FSMContext, bot: Bot):
     fd = data['fd']
     fp = data['fp']
     query = f"t={iso_format}&s={sum_total}&fn={fn}&i={fd}&fp={fp}&n=1"
+    print(query)
     try:
         client = NalogRuPython()
         ticket = client.get_ticket(query)

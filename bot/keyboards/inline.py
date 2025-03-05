@@ -10,6 +10,7 @@ start_options.add(
     InlineKeyboardButton(text="Суточные", callback_data="var1"),
     InlineKeyboardButton(text="Бензин и прочие расходы по автомобилю", callback_data="var2"),
     InlineKeyboardButton(text="Канцтовары", callback_data="stationery"),
+    InlineKeyboardButton(text="Представительские расходы", callback_data="entertainment"),
 )
 start_options.adjust(1, 1)
 
@@ -39,6 +40,7 @@ to_start.add(types.InlineKeyboardButton(text="◀️ В начало", callback_
 fill_check = InlineKeyboardBuilder()
 fill_check.add(types.InlineKeyboardButton(text="Заполнить данные", callback_data="fill_check"))
 
+
 check_failed = InlineKeyboardBuilder()
 check_failed.add(
     InlineKeyboardButton(text="Заполнить данные", callback_data="fill_check"),
@@ -47,9 +49,9 @@ check_failed.add(
 )
 check_failed.adjust(1, 1, 1)
 
+
 daily_back1 = InlineKeyboardBuilder()
 daily_back1.add(types.InlineKeyboardButton(text="⬅️ Назад ", callback_data="start"))
-
 
 input_check_back1 = InlineKeyboardBuilder()
 input_check_back1.add(types.InlineKeyboardButton(text="⬅️ Назад ", callback_data="input_check_back1"))
