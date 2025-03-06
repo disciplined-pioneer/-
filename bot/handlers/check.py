@@ -5,15 +5,13 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.state import StatesGroup, State
 from core.bot import bot
-from bot.keyboards.entertainment_expenses import *
+from bot.keyboards.check import *
 from integrations.check_info import CheckApi
 from datetime import datetime
 
 
-
 router = Router()
 check_api = CheckApi()
-
 
 
 # Функция для вывода успешного результата
@@ -87,57 +85,40 @@ async def handle_photo(message: Message, state: FSMContext):
     # Удаляем сообщение с фото
     await message.delete()
 
-    if True:
-        await bot.edit_message_text(
-            chat_id=message.chat.id, 
-            message_id=msg.message_id, 
-            text="Не удалось получить информацию о чеке\nМожете заполнить данные о чеке самостоятельно",
-            reply_markup=fill_check_butt
-        )
-
-    # Отправляем фото в API
+    # Получаем данные чека
     check_info = await check_api.info_by_img(img_url)
+    try:
+        data = check_info["request"]["manual"]
+        iso_format = datetime.strptime(check_info["data"]["json"]["dateTime"], "%Y-%m-%dT%H:%M:%S").strftime("%Y%m%dT%H%M")
+        fn = data["fn"]
+        fd = data["fd"]
+        fp = data["fp"]
+        sum_total = data["sum"]
 
-    # Проверяем, что запрос успешный
-    if 'error' in check_info:
-        await bot.edit_message_text(
-            chat_id=message.chat.id, 
-            message_id=msg.message_id, 
-            text="Не удалось получить информацию о чеке\nМожете заполнить данные о чеке самостоятельно",
-            reply_markup=fill_check_butt
-        )
+        result = {'date': iso_format,
+                'fn': fn,
+                'fd': fd,
+                'fp': fp,
+                'sum': sum_total}
         
-    else:
-        try:
-            # Получаем данные чека
-            result = check_info["request"]["manual"]
-            iso_format = datetime.strptime(check_info["data"]["json"]["dateTime"], "%d.%m.%Y %H:%M").strftime("%Y%m%dT%H%M")
-            fn = result["fn"]
-            fd = result["fd"]
-            fp = result["fp"]
 
-            sum_total = result["sum"]
-            sum_total = sum_total if '.00' in sum_total else sum_total + '.00'
-            query = f"t={iso_format}&s={sum_total}&fn={fn}&i={fd}&fp={fp}&n=1"
-
-
-            result_text = format_receipt_text(result)
-
-            await bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=msg.message_id,
-                text=result_text,
-                reply_markup=confirm_receipt_butt,
-                parse_mode="HTML"
-            )
-
-        except KeyError:
-            await bot.edit_message_text(
+        #query = f"t={iso_format}&s={sum_total}&fn={fn}&i={fd}&fp={fp}&n=1"
+        result_text = format_receipt_text(result)
+        await bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=msg.message_id,
+            text=result_text,
+            reply_markup=confirm_receipt_butt,
+            parse_mode="HTML"
+        )
+    except KeyError:
+        await bot.edit_message_text(
                 chat_id=message.chat.id, 
                 message_id=msg.message_id, 
                 text="Не удалось получить информацию о чеке\nМожете заполнить данные о чеке самостоятельно",
                 reply_markup=fill_check_butt
             )
+        
 
 
 # Если пользователь отправил не фото
@@ -304,10 +285,12 @@ async def back(callback: CallbackQuery, state: FSMContext):
         reply_markup=confirm_buttons
     )
 
+
 # Обработка кнопки "Подтверждающие документы"
 @router.callback_query(F.data == "generate_documents")
 async def generate_documents_callback(call: CallbackQuery):
     await call.message.edit_text("✅ Документы успешно сформированы.", reply_markup=None)
+
 
 # Обработка кнопки "Пропустить"
 @router.callback_query(F.data == "skip")

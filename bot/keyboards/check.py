@@ -24,7 +24,7 @@ confirm_receipt_butt = InlineKeyboardMarkup(
     inline_keyboard=[
         [InlineKeyboardButton(text="✅ Подтвердить", callback_data="confirm_receipt")],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="check_back")],
-        [InlineKeyboardButton(text="⬅️ В начало", callback_data="start")]
+        [InlineKeyboardButton(text="↩️ Главное меню", callback_data="start")]
     ]
 )
 
