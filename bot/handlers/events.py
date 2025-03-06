@@ -1,10 +1,9 @@
 import re
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
-from aiogram.fsm.state import StatesGroup, State
+from aiogram.types import Message, CallbackQuery
 from core.bot import bot
-from bot.keyboards.entertainment_expenses import *
+from bot.keyboards.events import *
 from bot.keyboards.check import confirm_buttons
 from bot.handlers.check import ReportManagement
 
@@ -22,7 +21,6 @@ questions_event = {
 # Обработчик кнопки "📝 Сформировать", продолжаем работу с Check_photo.asking
 @router.callback_query(ReportManagement.awaiting_documents, F.data == "generate_documents")
 async def generate_documents_callback(call: CallbackQuery, state: FSMContext):
-    # Обновляем состояние для записи ответов с их счётчиком
     await call.message.edit_text("✨ Выберите тип документа: ✨", reply_markup=report_category_keyboard)
 
 
@@ -180,7 +178,7 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
     # Отправляем сообщение
     await call.message.edit_text(message, reply_markup=None)
 
-
+    # ВРЕМЕННО
     await call.message.answer(f"Данные о чеке: {data['answers_check']}\n\nДанные о событии: {data['answers']}\n\nДанные о пользователях: {data['participants']}")
 
 

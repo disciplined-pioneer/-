@@ -8,6 +8,7 @@ from core.bot import bot
 from bot.keyboards.check import *
 from integrations.check_info import CheckApi
 from datetime import datetime
+from bot.handlers.present import GiftReport
 
 
 router = Router()
@@ -277,6 +278,7 @@ async def ask_next_question(message: Message, state: FSMContext):
 @router.callback_query(Check_photo.check, F.data == "confirm_receipt")
 @router.callback_query(Check_photo.asking, F.data == "confirm_receipt")
 @router.callback_query(ReportManagement.awaiting_documents, F.data == "report_back")
+@router.callback_query(GiftReport.awaiting_event, F.data == "report_back")
 async def back(callback: CallbackQuery, state: FSMContext):
 
     # Получаем данные из Check_photo
