@@ -30,7 +30,7 @@ confirm_receipt_butt = InlineKeyboardMarkup(
 
 confirm_buttons = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="📝Сформировать в боте подтверждающие документы", callback_data="generate_documents")],
+        [InlineKeyboardButton(text="📝 Сформировать в боте подтверждающие документы", callback_data="generate_documents")],
         [InlineKeyboardButton(text="⏭ Пропустить", callback_data="skip")]
     ]
 )

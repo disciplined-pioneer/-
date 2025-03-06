@@ -14,24 +14,29 @@ router = Router()
 check_api = CheckApi()
 
 
-# Функция для вывода успешного результата
-def format_receipt_text(result: dict) -> str:
-    sum_total = str(result['sum']) if '.00' in result['sum'] else result['sum'] + '.00'
-    
-    return (
-        f"Статус чека: <b>проверка пройдена✅</b>\n"
-        f"Дата чека: <b>{result['date']}</b>\n"
-        f"ФД: <b>{result['fd']}</b>\n"
-        f"Итого: <b>{sum_total}</b>\n"
-        f"НДС: <b>{result.get('vat', 'Не указан')}</b>\n"
-        f"Сумма без НДС: <b>{result.get('price_without_vat', 'Не указана')}</b>"
-    )
-
-
 # Состояние для чека
 class Check_photo(StatesGroup):
     check = State()
     asking = State()
+
+
+# Состояние для сохранения всех ответов
+class ReportManagement(StatesGroup):
+    awaiting_documents = State()
+
+
+# Функция для вывода успешного результата обработки чека
+def format_receipt_text(result: dict) -> str:
+    sum_total = str(result['sum']) if '.00' in result['sum'] else result['sum'] + '.00'
+
+    return (
+        f"Статус чека: <b>проверка пройдена✅</b>\n"
+        f"Дата чека: <b>{result['date']}</b>\n"
+        f"ФН: <b>{result['fn']}</b>\n"
+        f"ФД: <b>{result['fd']}</b>\n"
+        f"ФП: <b>{result['fp']}</b>\n"
+        f"Итого: <b>{sum_total}</b>\n"
+    )
 
 
 # Список вопросов для пользователя
@@ -78,8 +83,6 @@ async def handle_photo(message: Message, state: FSMContext):
     photo_id = message.photo[-1].file_id
     file = await bot.get_file(photo_id)
     img_url = f"https://api.telegram.org/file/bot{bot.token}/{file.file_path}"
-
-    await state.update_data(receipt_photo_url=img_url)
     msg = await message.answer("Пожалуйста, подождите, идёт получение данных о чеке…")
 
     # Удаляем сообщение с фото
@@ -111,6 +114,8 @@ async def handle_photo(message: Message, state: FSMContext):
             reply_markup=confirm_receipt_butt,
             parse_mode="HTML"
         )
+        await state.update_data(answers_check=result)
+
     except KeyError:
         await bot.edit_message_text(
                 chat_id=message.chat.id, 
@@ -119,7 +124,6 @@ async def handle_photo(message: Message, state: FSMContext):
                 reply_markup=fill_check_butt
             )
         
-
 
 # Если пользователь отправил не фото
 @router.message(Check_photo.check, F.text)
@@ -135,7 +139,7 @@ async def fill_details(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
     # Обновляем состояние для записи ответов с их счётчиком
-    await state.update_data(current_question=0, answers={})
+    await state.update_data(current_question=0, answers_check={})
     msg = await bot.edit_message_text(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
@@ -154,7 +158,7 @@ async def ask_next_question(message: Message, state: FSMContext):
     # Получаем текущий вопрос и ответ
     data = await state.get_data()
     current_question = data.get("current_question", 0)
-    answers = data.get("answers", {})
+    answers_check = data.get("answers_check", {})
 
     # Сообщения бота + id
     bot_message_id = data.get("bot_message_id")
@@ -227,12 +231,12 @@ async def ask_next_question(message: Message, state: FSMContext):
             return
 
     # Сохраняем ответ на текущий вопрос
-    answers[list_key[current_question]] = message.text
+    answers_check[list_key[current_question]] = message.text
 
     # Переход к следующему вопросу
     if current_question + 1 < len(questions):
         current_question += 1
-        await state.update_data(current_question=current_question, answers=answers)
+        await state.update_data(current_question=current_question, answers_check=answers_check)
 
         # Удаляем сообщение с ответом пользователя
         await message.delete()
@@ -250,7 +254,7 @@ async def ask_next_question(message: Message, state: FSMContext):
         await message.delete()
 
         # Получаем все данные пользователя
-        result = data['answers']
+        result = data['answers_check']
         iso_format = datetime.strptime(result['date'], "%d.%m.%Y %H:%M").strftime("%Y%m%dT%H%M")
         sum_total = str(result['sum']) if '.00' in result['sum'] else result['sum'] + '.00'
         fn = result['fn']
@@ -269,33 +273,34 @@ async def ask_next_question(message: Message, state: FSMContext):
         )
 
 
-# Обработка кнопки "✅ Подтвердить"
+# Обработка кнопки "✅ Подтвердить" или "⬅️ Назад" в ReportManagement
+@router.callback_query(Check_photo.check, F.data == "confirm_receipt")
 @router.callback_query(Check_photo.asking, F.data == "confirm_receipt")
+@router.callback_query(ReportManagement.awaiting_documents, F.data == "report_back")
 async def back(callback: CallbackQuery, state: FSMContext):
 
+    # Получаем данные из Check_photo
+    data = await state.get_data()
+
+    print(f'\n{data}\n')
+
+    # Сохраняем данные в ReportManagement и уст. состояние
+    answers_check = data.get("answers_check", None)
+    await state.update_data(answers_check=answers_check)    
+    await state.set_state(ReportManagement.awaiting_documents)
+
+    # Отправляем сообщение пользователю
     msg_text = (
         "🎉 Ваш расход успешно добавлен в отчет!🎉"
         "\n\n⬇️ Пожалуйста, прикрепите подтверждающие документы, нажав на кнопку ниже:"
     )
 
-    msg = await bot.edit_message_text(
+    await bot.edit_message_text(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=msg_text,
         reply_markup=confirm_buttons
     )
-
-
-# Обработка кнопки "Подтверждающие документы"
-@router.callback_query(F.data == "generate_documents")
-async def generate_documents_callback(call: CallbackQuery):
-    await call.message.edit_text("✅ Документы успешно сформированы.", reply_markup=None)
-
-
-# Обработка кнопки "Пропустить"
-@router.callback_query(F.data == "skip")
-async def skip_callback(call: CallbackQuery):
-    await call.message.edit_text("Вы пропустили формирование документов.", reply_markup=None)
 
 
 # Обработка кнопки "⬅️ Назад"
@@ -304,4 +309,3 @@ async def skip_callback(call: CallbackQuery):
 async def back(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await handle_entertainment(callback, state)  # Передаем callback и state
-
