@@ -139,7 +139,7 @@ async def confirm_document_callback(call: CallbackQuery, state: FSMContext):
     await call.message.answer(f"Данные о чеке: {data['answers_check']}\n\nДанные о получателях: {data['answers']['gifts']}")
 
 
-# Обработчик отмены документа
+# Обработчик кнопки "❌ Отменить"
 @router.callback_query(GiftReport.awaiting_document_confirmation, F.data == "cancel_document")
 async def cancel_document_callback(call: CallbackQuery, state: FSMContext):
     # Возвращаемся к добавлению информации о получателях
@@ -184,3 +184,16 @@ async def back_callback(call: CallbackQuery, state: FSMContext):
             "❌ Что-то пошло не так, попробуйте еще раз.",
             reply_markup=gift_info_keyboard
         )
+
+# Обработчик кнопки "⬅️ Назад"
+@router.callback_query(F.data == "report_back")
+async def back_callback(call: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    answers = data.get("answers", {})
+    answers.setdefault("gifts", [])
+    await state.update_data(answers=answers)
+
+    data = await state.get_data()
+    print(f"\n{data}\n")
+
+    await gifts_callback(call, state)
