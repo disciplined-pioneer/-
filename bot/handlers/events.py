@@ -121,16 +121,23 @@ async def back_question(callback: types.CallbackQuery, state: FSMContext):
     if current_question == 0:
         await generate_documents_callback(callback, state)
 
+    elif current_question == 3:
+        
+        # Удаление участника
+        current_question = 2
+        data = await state.get_data()
+        participants = data.get("participants", 0)
+        participants_count = data.get("participants_count", 0)
+        await state.update_data(participants_count=participants_count-1, participants=participants[:-1])
+
+        await state.update_data(current_question=current_question)
+        await callback.message.edit_text(questions_event[list_key[current_question]], reply_markup=event_back_keyboard)
+
     elif current_question > 0:
         current_question -= 1
         await state.update_data(current_question=current_question)
         await callback.message.edit_text(questions_event[list_key[current_question]], reply_markup=event_back_keyboard)
         
-    elif current_question == 4:
-        current_question = 2
-        await state.update_data(current_question=current_question)
-        await callback.message.edit_text(questions_event[list_key[current_question]], reply_markup=event_back_keyboard)
-
 
 # Обработчик нажатия кнопки "✅ Подтвердить"
 @router.callback_query(F.data == 'confirm_action')
@@ -143,8 +150,15 @@ async def confirm_action(callback: types.CallbackQuery):
 
 # Обработчик нажатия кнопки "❌ Отменить"
 @router.callback_query(F.data == 'cancel_action')
-async def cancel_action(callback: types.CallbackQuery):
+async def cancel_action(callback: types.CallbackQuery, state: FSMContext):
     message = "❌ Добавление участника отменено.\n\n🔄 Хотите попробовать снова?"
+    
+    # Удаление участника
+    data = await state.get_data()
+    print(f"\n{data}\n")
+    participants = data.get("participants", 0)
+    participants_count = data.get("participants_count", 0)
+    await state.update_data(participants_count=participants_count-1, participants=participants[:-1])
     await callback.message.edit_text(message, reply_markup=meeting_keyboard)
 
 
@@ -152,6 +166,7 @@ async def cancel_action(callback: types.CallbackQuery):
 @router.callback_query(F.data == 'cancel_action_two')
 async def cancel_action_two(callback: CallbackQuery, state: FSMContext):
     # Вызов функции skip_callback
+    await state.update_data(participants_count=0, participants=[])
     await skip_callback(callback, state)
 
 
