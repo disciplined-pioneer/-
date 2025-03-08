@@ -2,9 +2,16 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 event_back_keyboard = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="⬅️ Назад", callback_data="report_back")]
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="report_back_two")]
     ]
 )
+
+back_keyboard = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="question_present_back")]
+    ]
+)
+
 
 gift_action_keyboard = InlineKeyboardMarkup(
     inline_keyboard=[

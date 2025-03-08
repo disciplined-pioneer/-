@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from core.bot import bot
-
+from bot.handlers.events import generate_documents_callback
 from bot.keyboards.present import *
 
 router = Router()
@@ -22,6 +22,8 @@ async def gifts_callback(call: CallbackQuery, state: FSMContext):
 
     # Сохраняем данные в GiftReport и уст. состояние
     data = await state.get_data()
+    print(f"\n{data}\n")
+
     answers_check = data.get("answers_check", None)
     await state.update_data(answers_check=answers_check)    
     await state.set_state(GiftReport.check)
@@ -44,6 +46,7 @@ async def gifts_callback(call: CallbackQuery, state: FSMContext):
 @router.message(GiftReport.awaiting_event, F.text)
 async def event_message_handler(message: types.Message, state: FSMContext):
     data = await state.get_data()
+    
     answers = data.get("answers", {})
 
     # Сохраняем ответ о событии
@@ -60,7 +63,7 @@ async def event_message_handler(message: types.Message, state: FSMContext):
         text="Давайте соберем информацию о получателях подарков! 🎁\n\n"
              "• 📋 Введите наименование юридического лица и количество подарков в формате: [Наименование юридического лица] - [Количество] \n\n"
              "Например: ООО 'Ромашка' - 10",
-        reply_markup=event_back_keyboard
+        reply_markup=back_keyboard
     )
 
     # Переходим к состоянию ожидания информации о получателях
@@ -89,15 +92,22 @@ async def gifts_recipient_handler(message: types.Message, state: FSMContext):
         reply_markup=gift_action_keyboard
     )
 
+    data = await state.get_data()
+    print(f"\n{data}\n")
+
 
 # Обработчик нажатия кнопки "🔘 Добавить инф о получателе подарков"
 @router.callback_query(GiftReport.awaiting_recipient_info, F.data == "add_gift_info")
 async def add_gift_info_callback(call: CallbackQuery, state: FSMContext):
+
     # Возвращаем пользователя к вводу информации о получателях
     await call.message.edit_text(
         "📋 Введите наименование юридического лица и количество подарков в формате: [Наименование юридического лица] - [Количество]\n\nНапример: ООО 'Ромашка' - 10",
         reply_markup=event_back_keyboard
     )
+
+    data = await state.get_data()
+    print(f"\n{data}\n")
 
 
 # Обработчик нажатия кнопки "✅ Сформировать документы по встрече"
@@ -106,6 +116,7 @@ async def gen_documents_callback(call: CallbackQuery, state: FSMContext):
 
     # Получаем данные состояния
     data = await state.get_data()
+    
     gifts_info = "\n".join([f"• {gift}" for gift in data.get("answers", {}).get("gifts", [])])
 
     message = f"📄 Вы готовы сформировать подтверждающий документ с следующими данными:\n\n{gifts_info}\n\n🔄 Подтвердите:"
@@ -142,16 +153,25 @@ async def confirm_document_callback(call: CallbackQuery, state: FSMContext):
 # Обработчик кнопки "❌ Отменить"
 @router.callback_query(GiftReport.awaiting_document_confirmation, F.data == "cancel_document")
 async def cancel_document_callback(call: CallbackQuery, state: FSMContext):
+
     # Возвращаемся к добавлению информации о получателях
     await call.message.edit_text(
         "❌ Отмена добавления документов.\n\n🔄 Хотите попробовать снова?",
         reply_markup=gift_info_keyboard
     )
 
+    data = await state.get_data()
+    print(f"\n{data}\n")
+
+
 # Обработчик кнопки "⬅️ Назад" на шаге отчета
 @router.callback_query(F.data == "question_present_back")
 async def back_callback(call: CallbackQuery, state: FSMContext):
+
+    await state.update_data(answers={})  
     data = await state.get_data()
+    print(f"\n{data}\n")
+    
     current_state = await state.get_state()
 
     print('попал')
@@ -173,6 +193,14 @@ async def back_callback(call: CallbackQuery, state: FSMContext):
         )
     elif current_state == GiftReport.awaiting_document_confirmation.state:
         # Если на этапе подтверждения документов, возвращаем в этап ввода информации о получателе
+
+        if "answers" in data and "gifts" in data["answers"] and isinstance(data["answers"]["gifts"], list):
+            if data["answers"]["gifts"]:  # Проверяем, не пуст ли список
+                data["answers"]["gifts"].pop()  # Удаляем последний элемент
+
+        # Обновляем состояние
+        await state.update_data(answers=data["answers"])
+
         await state.set_state(GiftReport.awaiting_recipient_info)
         await call.message.edit_text(
             "📋 Введите наименование юридического лица и количество подарков в формате: [Наименование юридического лица] - [Количество]\n\nНапример: ООО 'Ромашка' - 10",
@@ -186,14 +214,10 @@ async def back_callback(call: CallbackQuery, state: FSMContext):
         )
 
 # Обработчик кнопки "⬅️ Назад"
-@router.callback_query(F.data == "report_back")
+@router.callback_query(F.data == "report_back_two")
 async def back_callback(call: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    answers = data.get("answers", {})
-    answers.setdefault("gifts", [])
-    await state.update_data(answers=answers)
-
+    await state.update_data(answers={})  
     data = await state.get_data()
     print(f"\n{data}\n")
 
-    await gifts_callback(call, state)
+    await generate_documents_callback(call, state)
