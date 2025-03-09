@@ -11,6 +11,7 @@ start_options.add(
     InlineKeyboardButton(text="Бензин и прочие расходы по автомобилю", callback_data="var2"),
     InlineKeyboardButton(text="Канцтовары", callback_data="stationery"),
     InlineKeyboardButton(text="Представительские расходы", callback_data="entertainment"),
+    InlineKeyboardButton(text="Бизнес-завтрак/Фармкружок", callback_data="biznes_zavtrak_farmkruzhok")
 )
 start_options.adjust(1, 1)
 

@@ -33,6 +33,6 @@ meeting_keyboard = InlineKeyboardMarkup(
 confirmation_keyboard_two = InlineKeyboardMarkup(
     inline_keyboard=[
         [InlineKeyboardButton(text="✅ Сформировать документы по встрече", callback_data="generate_documents_tree")],
-        [InlineKeyboardButton(text="❌ Отменить", callback_data="cancel_action_two")]
+        [InlineKeyboardButton(text="❌ Отменить", callback_data="report_back")]
     ]
 )

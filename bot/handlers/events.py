@@ -6,6 +6,7 @@ from core.bot import bot
 from bot.keyboards.events import *
 from bot.keyboards.check import confirm_buttons
 from bot.handlers.check import ReportManagement
+from bot.keyboards.biznes_zavtrak import preparations_keyboard
 
 router = Router()
 
@@ -19,35 +20,34 @@ questions_event = {
 }
 
 # Обработчик кнопки "📝 Сформировать", продолжаем работу с Check_photo.asking
-@router.callback_query(ReportManagement.awaiting_documents, F.data == "generate_documents")
+@router.callback_query(F.data == "generate_documents")
 async def generate_documents_callback(call: CallbackQuery, state: FSMContext):
-    await call.message.edit_text("✨ Выберите тип документа: ✨", reply_markup=report_category_keyboard)
+    data = await state.get_data()
+    
+    if data['callback_data'] == 'biznes_zavtrak_farmkruzhok':
+        await call.message.edit_text("Введите данные для заполнения шаблона:\n💊 Выберите препарат из списка ниже", reply_markup=preparations_keyboard)
+    
+    elif data['callback_data'] == 'entertainment':
+        await call.message.edit_text("✨ Выберите тип документа: ✨", reply_markup=report_category_keyboard)
 
 
 # Обработка кнопки "1️⃣ Мероприятие"
-@router.callback_query(ReportManagement.awaiting_documents, F.data == "report_event")
+@router.callback_query(F.data == "report_event")
+@router.callback_query(F.data == "confirm")
 async def event_callback(call: CallbackQuery, state: FSMContext):
+
+    # Сохраняем данные в ReportManagement и уст. состояние
+    data = await state.get_data()
+    answers_check = data.get("answers_check", None)
+    await state.update_data(answers_check=answers_check)    
+    await state.set_state(ReportManagement.awaiting_documents)
+
     msg = await call.message.edit_text(questions_event['event_location'],
                                        reply_markup=event_back_keyboard)
 
     # Счётчик для вопросов и хранение ответов
     await state.update_data(current_question=0, answers={})
     await state.update_data(bot_message_id=msg.message_id)
-
-
-# Обработчик кнопки "🔘 Добавить участника"
-@router.callback_query(ReportManagement.awaiting_documents, F.data == "add_participant")
-async def add_participant_callback(call: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    participants_count = data.get("participants_count", 0)
-
-    if participants_count >= MAX_PARTICIPANTS:
-        await call.message.edit_text("🚫 Достигнут предел по количеству участников. Максимум 10 человек.", reply_markup=None)
-        return
-
-    # Запускаем процесс ввода данных для нового участника, начиная с ФИО
-    await state.update_data(current_question=2, participants_count=participants_count)
-    msg = await call.message.edit_text(questions_event['guest_name'], reply_markup=event_back_keyboard)
 
 
 # Обработка вопросов по циклу для ввода данных о новом участнике
@@ -128,7 +128,7 @@ async def back_question(callback: types.CallbackQuery, state: FSMContext):
         data = await state.get_data()
         participants = data.get("participants", 0)
         participants_count = data.get("participants_count", 0)
-        await state.update_data(participants_count=participants_count-1, participants=participants[:-1])
+        #await state.update_data(participants_count=participants_count-1, participants=participants[:-1])
 
         await state.update_data(current_question=current_question)
         await callback.message.edit_text(questions_event[list_key[current_question]], reply_markup=event_back_keyboard)
@@ -137,7 +137,22 @@ async def back_question(callback: types.CallbackQuery, state: FSMContext):
         current_question -= 1
         await state.update_data(current_question=current_question)
         await callback.message.edit_text(questions_event[list_key[current_question]], reply_markup=event_back_keyboard)
-        
+
+
+# Обработчик кнопки "🔘 Добавить участника"
+@router.callback_query(ReportManagement.awaiting_documents, F.data == "add_participant")
+async def add_participant_callback(call: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    participants_count = data.get("participants_count", 0)
+
+    if participants_count >= MAX_PARTICIPANTS:
+        await call.message.edit_text("🚫 Достигнут предел по количеству участников. Максимум 10 человек.", reply_markup=None)
+        return
+
+    # Запускаем процесс ввода данных для нового участника, начиная с ФИО
+    await state.update_data(current_question=2, participants_count=participants_count)
+    msg = await call.message.edit_text(questions_event['guest_name'], reply_markup=event_back_keyboard)
+
 
 # Обработчик нажатия кнопки "✅ Подтвердить"
 @router.callback_query(F.data == 'confirm_action')
@@ -209,11 +224,21 @@ async def generate_documents_callback_two(call: CallbackQuery, state: FSMContext
     # Если участники есть, формируем список
     if participants:
         participants_info = "\n".join(
-            [f"• <b>{p['guest_name']}</b> ({p['guest_workplace']})" for p in participants]
+            [f"\t\t• <b>{p['guest_name']}</b> ({p['guest_workplace']})" for p in participants]
         )
-        message = (f"📄 Вы готовы сформировать документ по встрече с следующими участниками:\n\n"
-                   f"{participants_info}\n\n"
-                   "🔄 Подтвердите создание отчета:")
+        
+        message = (
+            "📄 Все данные собраны!"
+            "\n\nПожалуйста, подтвердите информацию перед отправкой:"
+            f"\n\n- Место проведения: {data.get('answers', {}).get('meeting_theme', 'Не указано')}"
+            f"\n\n - Тема собрания: {data.get('answers', {}).get('event_location', 'Не указано')}"
+            f"\n\n - Приглашённые участники:\n{participants_info}"
+        )
+
+        if data.get('callback_data') == 'biznes_zavtrak_farmkruzhok':
+            message += f"\n\n - Препарат: {data.get('selected_drug', 'Не выбран')}"
+
+
     else:
         message = "🚫 У вас нет добавленных участников."
 
@@ -229,4 +254,4 @@ async def skip_callback(call: CallbackQuery, state: FSMContext):
                 'Вы можете скачать его по ссылке ниже:'
                 '\n\n🔗 Скачать отчет'
                 )
-    await call.message.edit_text(mass_text, reply_markup=confirm_buttons)
+    await call.message.edit_text(mass_text)

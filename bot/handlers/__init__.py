@@ -7,6 +7,7 @@ from .stationery import router as stationery
 from .check import router as check_r
 from .events import router as entertainment
 from .present import router as present
+from .biznes_zavtrak import router as biznes
 
 routers = [
     auth,
@@ -17,5 +18,6 @@ routers = [
     stationery,
     check_r,
     entertainment,
-    present
+    present,
+    biznes
 ]

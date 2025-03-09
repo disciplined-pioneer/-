@@ -8,12 +8,9 @@ from core.bot import bot
 from bot.keyboards.check import *
 from integrations.check_info import CheckApi
 from datetime import datetime
-#from bot.handlers.present import GiftReport
-
 
 router = Router()
 check_api = CheckApi()
-
 
 # Состояние для чека
 class Check_photo(StatesGroup):
@@ -52,6 +49,7 @@ questions = {
 
 # Обработка кнопки "Представительские расходы"
 @router.callback_query(F.data == "entertainment")
+@router.callback_query(F.data == "biznes_zavtrak_farmkruzhok")
 async def handle_entertainment(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
@@ -64,7 +62,7 @@ async def handle_entertainment(callback: CallbackQuery, state: FSMContext):
     )
 
     # Сохраняем ID сообщения, чтобы удалить его в следующем шаге
-    await state.update_data(original_message_id=message.message_id)
+    await state.update_data(original_message_id=message.message_id, callback_data=callback.data)
     await state.set_state(Check_photo.check)
 
 
@@ -277,19 +275,12 @@ async def ask_next_question(message: Message, state: FSMContext):
 # Обработка кнопки "✅ Подтвердить" или "⬅️ Назад" в ReportManagement
 @router.callback_query(Check_photo.check, F.data == "confirm_receipt")
 @router.callback_query(Check_photo.asking, F.data == "confirm_receipt")
-@router.callback_query(ReportManagement.awaiting_documents, F.data == "report_back")
-#@router.callback_query(GiftReport.awaiting_event, F.data == "report_back")
+@router.callback_query(F.data == "report_back")
 async def back(callback: CallbackQuery, state: FSMContext):
 
     # Получаем данные из Check_photo
     data = await state.get_data()
-
     print(f'\n{data}\n')
-
-    # Сохраняем данные в ReportManagement и уст. состояние
-    answers_check = data.get("answers_check", None)
-    await state.update_data(answers_check=answers_check)    
-    await state.set_state(ReportManagement.awaiting_documents)
 
     # Отправляем сообщение пользователю
     msg_text = (
