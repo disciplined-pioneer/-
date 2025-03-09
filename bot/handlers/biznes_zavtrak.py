@@ -1,12 +1,8 @@
-
-from aiogram import F, Router, types
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
-from aiogram.fsm.state import StatesGroup, State
+from aiogram.types import CallbackQuery
 from core.bot import bot
 from bot.keyboards.check import *
-from integrations.check_info import CheckApi
-from datetime import datetime
 
 from bot.handlers.events import generate_documents_callback
 from bot.keyboards.biznes_zavtrak import confirm_biznes_keyboard

@@ -5,7 +5,7 @@ from spire.xls.common import *
 workbook = Workbook()
 
 # Load a XLS or XLSX document
-workbook.LoadFromFile("filexlsx")
+workbook.LoadFromFile("file.xlsx")
 
 # Iterate through the worksheets in the workbook
 for sheet in workbook.Worksheets: 
