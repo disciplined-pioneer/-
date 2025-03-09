@@ -8,6 +8,7 @@ from bot.keyboards.check import *
 from integrations.check_info import CheckApi
 from datetime import datetime
 
+from bot.handlers.events import generate_documents_callback
 from bot.keyboards.biznes_zavtrak import confirm_biznes_keyboard
 
 router = Router()
@@ -38,3 +39,9 @@ async def process_drug_selection(callback: CallbackQuery, state: FSMContext):
         text=f"🔍 Пожалуйста, подтвердите ваш выбор препарата: {selected_drug}",
         reply_markup=confirm_biznes_keyboard
     )
+
+
+# Обработка кнопки "❌ Отменить выбор"
+@router.callback_query(F.data == "change")
+async def change_selection(callback: CallbackQuery, state: FSMContext):
+    await generate_documents_callback(callback, state)
