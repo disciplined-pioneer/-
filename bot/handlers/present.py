@@ -1,19 +1,14 @@
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import CallbackQuery
 from core.bot import bot
 from bot.handlers.events import generate_documents_callback
 from bot.keyboards.present import *
 
-router = Router()
+from utils.present import *
+from bot.templates.present import *
 
-# Новый класс состояния для обработки подарков
-class GiftReport(StatesGroup):
-    check = State()
-    awaiting_event = State()
-    awaiting_recipient_info = State()
-    awaiting_document_confirmation = State()
+router = Router()
 
 
 # Для обработки кнопки "2️⃣ Подарки"
@@ -30,7 +25,7 @@ async def gifts_callback(call: CallbackQuery, state: FSMContext):
 
     # Отправляем сообщение с вопросом
     msg = await call.message.edit_text(
-        "💭 В связи с каким событием были приобретены подарки? (например, день рождения, юбилей, праздник и т.д.) 🗓", 
+        gift_purpose_question, 
         reply_markup=event_back_keyboard
     )
     
@@ -60,9 +55,7 @@ async def event_message_handler(message: types.Message, state: FSMContext):
     await bot.edit_message_text(
         chat_id=message.chat.id,
         message_id=data["bot_message_id"],
-        text="Давайте соберем информацию о получателях подарков! 🎁\n\n"
-             "• 📋 Введите наименование юридического лица и количество подарков в формате: [Наименование юридического лица] - [Количество] \n\n"
-             "Например: ООО 'Ромашка' - 10",
+        text=gift_recipients_info_request,
         reply_markup=back_keyboard
     )
 
@@ -88,7 +81,7 @@ async def gifts_recipient_handler(message: types.Message, state: FSMContext):
     await bot.edit_message_text(
         chat_id=message.chat.id,
         message_id=data["bot_message_id"],
-        text=f"Спасибо! Вы указали:\n\n{recipient_info}\n\n🔄 Хотите добавить еще?",
+        text=generate_thank_you_message(recipient_info),
         reply_markup=gift_action_keyboard
     )
 
@@ -102,7 +95,7 @@ async def add_gift_info_callback(call: CallbackQuery, state: FSMContext):
 
     # Возвращаем пользователя к вводу информации о получателях
     await call.message.edit_text(
-        "📋 Введите наименование юридического лица и количество подарков в формате: [Наименование юридического лица] - [Количество]\n\nНапример: ООО 'Ромашка' - 10",
+        gift_recipient_info_request,
         reply_markup=event_back_keyboard
     )
 
@@ -118,11 +111,8 @@ async def gen_documents_callback(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     
     gifts_info = "\n".join([f"• {gift}" for gift in data.get("answers", {}).get("gifts", [])])
-
-    message = f"📄 Вы готовы сформировать подтверждающий документ с следующими данными:\n\n{gifts_info}\n\n🔄 Подтвердите:"
-
     await call.message.edit_text(
-        message,
+        generate_confirmation_document_message(gifts_info),
         reply_markup=conf_keyboard
     )
 
@@ -135,16 +125,9 @@ async def gen_documents_callback(call: CallbackQuery, state: FSMContext):
 async def confirm_document_callback(call: CallbackQuery, state: FSMContext):
 
     # Создаем документ
-    message = (
-        "Документ по встрече успешно создан! 📄\n\n"
-        "• 📂 Вы можете скачать файл:\n"
-        "  • Файл 1: [Прикрепленный файл с подтверждением подарков]\n\n"
-        "Хотите добавить новый тип расхода в существующий отчет?"
-    )
     data = await state.get_data()
     print(f'\n{data}\n')
-
-    await call.message.edit_text(message, reply_markup=new_expense_keyboard)
+    await call.message.edit_text(meeting_document_creation_message, reply_markup=new_expense_keyboard)
 
     # ВРЕМЕННО
     await call.message.answer(f"Данные о чеке: {data['answers_check']}\n\nДанные о получателях: {data['answers']['gifts']}")
@@ -156,7 +139,7 @@ async def cancel_document_callback(call: CallbackQuery, state: FSMContext):
 
     # Возвращаемся к добавлению информации о получателях
     await call.message.edit_text(
-        "❌ Отмена добавления документов.\n\n🔄 Хотите попробовать снова?",
+        document_addition_canceled,
         reply_markup=gift_info_keyboard
     )
 
@@ -181,19 +164,18 @@ async def back_callback(call: CallbackQuery, state: FSMContext):
         # Если пользователь на этапе ввода события, возвращаем на этап "check"
         await state.set_state(GiftReport.check)
         await call.message.edit_text(
-            "💭 В связи с каким событием были приобретены подарки? (например, день рождения, юбилей, праздник и т.д.) 🗓", 
+            gift_purpose_question, 
             reply_markup=event_back_keyboard
         )
     elif current_state == GiftReport.awaiting_recipient_info.state:
         # Если на этапе ввода информации о получателе подарков, возвращаемся на предыдущий шаг
         await state.set_state(GiftReport.awaiting_event)
         await call.message.edit_text(
-            "💭 В связи с каким событием были приобретены подарки? (например, день рождения, юбилей, праздник и т.д.) 🗓", 
+            gift_purpose_question,
             reply_markup=event_back_keyboard
         )
     elif current_state == GiftReport.awaiting_document_confirmation.state:
         # Если на этапе подтверждения документов, возвращаем в этап ввода информации о получателе
-
         if "answers" in data and "gifts" in data["answers"] and isinstance(data["answers"]["gifts"], list):
             if data["answers"]["gifts"]:  # Проверяем, не пуст ли список
                 data["answers"]["gifts"].pop()  # Удаляем последний элемент
@@ -203,13 +185,13 @@ async def back_callback(call: CallbackQuery, state: FSMContext):
 
         await state.set_state(GiftReport.awaiting_recipient_info)
         await call.message.edit_text(
-            "📋 Введите наименование юридического лица и количество подарков в формате: [Наименование юридического лица] - [Количество]\n\nНапример: ООО 'Ромашка' - 10",
+            gift_recipient_info_request,
             reply_markup=gift_info_keyboard
         )
     else:
         # Если по каким-то причинам пользователь не в известном состоянии, выводим стандартное сообщение
         await call.message.edit_text(
-            "❌ Что-то пошло не так, попробуйте еще раз.",
+            something_went_wrong,
             reply_markup=gift_info_keyboard
         )
 
