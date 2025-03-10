@@ -245,7 +245,7 @@ async def skip_callback(call: CallbackQuery, state: FSMContext):
         add_data_to_cell('file.xlsx', key, value)
     
     # Используем FSInputFile для отправки файла
-    file_path = "file.xlsx" 
+    file_path = r"data/advance_report.xlsx" 
     file = FSInputFile(file_path)
     
     await call.message.answer_document(

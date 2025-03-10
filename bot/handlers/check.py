@@ -114,7 +114,6 @@ async def handle_non_photo(message: Message):
 @router.callback_query(F.data == "fill_check")
 async def fill_details(callback: CallbackQuery, state: FSMContext):
 
-    #await state.clear()  # Очищаем старое состояние
     await callback.answer()
 
     # Обновляем состояние для записи ответов с их счётчиком
