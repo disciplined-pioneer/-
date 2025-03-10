@@ -15,41 +15,46 @@ def convert_number_to_text(number):
 
 # Функция для перевода суммы в нужный формат
 def process_data(data):
-
+    
     # Получение значений
     sum_value = float(data.get("answers_check")['sum'])  # Преобразуем строку в число
-    date_str = data.get("answers_check")['date']
+    date_input = data.get("answers_check")['date']  # Может быть str или datetime
 
     # Q9: Целая часть от sum
     Q9 = int(sum_value)  # Целая часть суммы
     
     # W9: Копейки от sum
-    W9 = round(sum_value - Q9, 2) * 100  # Копейки (умножаем на 100 для получения числа с копейками)
+    W9 = round((sum_value - Q9) * 100)  # Копейки (умножаем на 100 для получения целого числа)
+
+    # Определяем формат входящей даты
+    if isinstance(date_input, datetime):  # Если уже объект datetime
+        date_obj = date_input
+    else:
+        try:
+            date_obj = datetime.strptime(date_input, '%Y%m%dT%H%M')  # Если формат ISO (например, 20250310T1530)
+        except ValueError:
+            date_obj = datetime.strptime(date_input, '%d.%m.%Y %H:%M')  # Если формат "01.01.2025 15:30"
 
     # I13: Дата в формате 'ДД.ММ.ГГ'
-    date_obj = datetime.strptime(date_str, '%Y%m%dT%H%M')
     I13 = date_obj.strftime('%d.%m.%y')  # Преобразуем в нужный формат
 
     # I33: Сумма (просто отображаем sum_value)
     I33 = sum_value
-    
+
     # P23: Форматированное слово "Расход" + месяц и год
-    date_obj_month_year = datetime.strptime(date_str, '%Y%m%dT%H%M')
-    # Переводим месяц на русский
-    P23 = f"Расход {date_obj_month_year.strftime('%B %Y').capitalize()}"
-    # Переводим месяц на русский вручную
     months = {
         'January': 'Январь', 'February': 'Февраль', 'March': 'Март', 'April': 'Апрель', 
         'May': 'Май', 'June': 'Июнь', 'July': 'Июль', 'August': 'Август', 'September': 'Сентябрь', 
         'October': 'Октябрь', 'November': 'Ноябрь', 'December': 'Декабрь'
     }
-    P23 = P23.replace(date_obj_month_year.strftime('%B'), months[date_obj_month_year.strftime('%B')])
+
+    month_eng = date_obj.strftime('%B')  # Получаем название месяца на английском
+    P23 = f"Расход {months.get(month_eng, month_eng)} {date_obj.strftime('%Y')}"  # Переводим на русский
 
     # I39: Преобразуем сумму в текст
     rub, kop = divmod(sum_value, 1)  # Разделяем на рубли и копейки
     kop = round(kop * 100)  # Преобразуем копейки в целое число
-    # Форматируем сумму в текст
-    I39 = f"{convert_number_to_text(rub)} рублей {kop} копеек ({int(rub)} руб. {kop} коп.)"
+    I39 = f"{convert_number_to_text(int(rub))} рублей {kop} копеек ({int(rub)} руб. {kop} коп.)"
 
     # Результат в виде словаря
     return {

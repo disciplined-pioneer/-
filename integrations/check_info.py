@@ -95,6 +95,7 @@ class CheckApi:
             sum: float,
             type: int = 1
     ) -> dict:
+    
         async with aiohttp.ClientSession(self._base_url) as s:
             r = await s.post(
                 url='/api/v1/check/get',
@@ -108,7 +109,7 @@ class CheckApi:
                 }
             )
             data = await r.json()
-            print(data)
+            #print(data)
 
             if not data['code'] == 1:
                 return {'error': True, 'code': data['code']}
@@ -129,7 +130,7 @@ class CheckApi:
                 }
             )
             data = await r.json()
-            print(data)
+            #print(data)
 
             if not data['code'] == 1:
                 return {'error': True, 'code': data['code']}

@@ -16,7 +16,7 @@ router = Router()
 check_api = CheckApi()
 
 
-# Обработка кнопки "Представительские расходы"
+# Обработка кнопки "Представительские расходы" и "Бизнес завтраки"
 @router.callback_query(F.data == "entertainment")
 @router.callback_query(F.data == "biznes_zavtrak_farmkruzhok")
 async def handle_entertainment(callback: CallbackQuery, state: FSMContext):
@@ -60,29 +60,40 @@ async def handle_photo(message: Message, state: FSMContext):
     check_info = await check_api.info_by_img(img_url)
     try:
         data = check_info["request"]["manual"]
-        iso_format = datetime.strptime(check_info["data"]["json"]["dateTime"], "%Y-%m-%dT%H:%M:%S").strftime("%Y%m%dT%H%M")
+        date = datetime.strptime(check_info["data"]["json"]["dateTime"], "%Y-%m-%dT%H:%M:%S")
         fn = data["fn"]
         fd = data["fd"]
         fp = data["fp"]
         sum_total = data["sum"]
 
-        result = {'date': iso_format,
-                'fn': fn,
-                'fd': fd,
-                'fp': fp,
-                'sum': sum_total}
+        result = {'date': date,
+                  'fn': fn,
+                  'fd': fd,
+                  'fp': fp,
+                  'sum': float(sum_total)}
         
+        # Проверяем чек
+        request = await check_api.info_by_raw(fn=fn, fp=fp, fd=fd, date=date, sum=sum_total, type=1)
+        if request.get('error'):
+            await bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=msg.message_id,
+                text=check_info_error_message,
+                reply_markup=response_keyboard,
+                parse_mode="HTML"
+            )
+            await state.update_data(answers_check=result)
 
-        #query = f"t={iso_format}&s={sum_total}&fn={fn}&i={fd}&fp={fp}&n=1"
-        result_text = format_receipt_text(result)
-        await bot.edit_message_text(
-            chat_id=message.chat.id,
-            message_id=msg.message_id,
-            text=result_text,
-            reply_markup=confirm_receipt_butt,
-            parse_mode="HTML"
-        )
-        await state.update_data(answers_check=result)
+        else:
+            result_text = format_receipt_text(result, 'проверка пройдена ✅')
+            await bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=msg.message_id,
+                text=result_text,
+                reply_markup=confirm_receipt_butt,
+                parse_mode="HTML"
+            )
+            await state.update_data(answers_check=result)
 
     except KeyError:
         await bot.edit_message_text(
@@ -100,10 +111,10 @@ async def handle_non_photo(message: Message):
 
 
 # Обработка кнопки "Заполнить данные"
-@router.callback_query(Check_photo.check, F.data == "fill_check")
+@router.callback_query(F.data == "fill_check")
 async def fill_details(callback: CallbackQuery, state: FSMContext):
 
-    await state.clear()  # Очищаем старое состояние
+    #await state.clear()  # Очищаем старое состояние
     await callback.answer()
 
     # Обновляем состояние для записи ответов с их счётчиком
@@ -223,23 +234,54 @@ async def ask_next_question(message: Message, state: FSMContext):
 
         # Получаем все данные пользователя
         result = data['answers_check']
-        iso_format = datetime.strptime(result['date'], "%d.%m.%Y %H:%M").strftime("%Y%m%dT%H%M")
-        sum_total = str(result['sum']) if '.00' in result['sum'] else result['sum'] + '.00'
+        date = datetime.strptime(result['date'], "%d.%m.%Y %H:%M")
+        sum_total = float(data['answers_check']['sum'])
         fn = result['fn']
         fd = result['fd']
         fp = result['fp']
-        query = f"t={iso_format}&s={sum_total}&fn={fn}&i={fd}&fp={fp}&n=1"
 
-        result_text = format_receipt_text(result)
+        result = {'date': date,
+                  'fn': fn,
+                  'fd': fd,
+                  'fp': fp,
+                  'sum': sum_total}
+        
+        # Проверяем чек
+        request = await check_api.info_by_raw(fn=fn, fp=fp, fd=fd, date=date, sum=sum_total, type=1)
+        if request.get('error'):
+            await bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=bot_message_id,
+                text=check_info_error_message,
+                reply_markup=response_keyboard,
+                parse_mode="HTML"
+            )
+        else:
+            result_text = format_receipt_text(result, 'проверка пройдена ✅')
+            await bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=bot_message_id,
+                text=result_text,
+                reply_markup=confirm_receipt_butt,
+                parse_mode="HTML"
+            )
 
-        await bot.edit_message_text(
-            chat_id=message.chat.id,
-            message_id=bot_message_id,
-            text=result_text,
-            reply_markup=confirm_receipt_butt,
-            parse_mode="HTML"
-        )
 
+# Обработка кнопки "Сформировать отчёт"
+@router.callback_query(F.data == "generate_report_check")
+async def generate_report_check(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    result = data.get("answers_check", {})
+    print(result)
+    result['sum'] = float(result['sum'])
+
+    result_text = format_receipt_text(result, 'проверка не пройдена ❌')
+    await callback.message.edit_text(
+        text=result_text, 
+        reply_markup=confirm_receipt_butt,
+        parse_mode="HTML"
+    )
+    
 
 # Обработка кнопки "✅ Подтвердить" или "⬅️ Назад" в ReportManagement
 @router.callback_query(Check_photo.check, F.data == "confirm_receipt")

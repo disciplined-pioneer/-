@@ -34,3 +34,12 @@ confirm_buttons = InlineKeyboardMarkup(
         [InlineKeyboardButton(text="⏭ Пропустить", callback_data="skip")]
     ]
 )
+
+
+response_keyboard = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="Заполнить данные", callback_data="fill_check")],
+        [InlineKeyboardButton(text="Сформировать отчёт", callback_data="generate_report_check")],
+        [InlineKeyboardButton(text="↩️ Главное меню", callback_data="start")]
+    ]
+)

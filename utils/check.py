@@ -12,11 +12,11 @@ def get_nds(check_data: dict) -> int:
 
 
 # Функция для вывода успешного результата обработки чека
-def format_receipt_text(result: dict) -> str:
-    sum_total = str(result['sum']) if '.00' in result['sum'] else result['sum'] + '.00'
+def format_receipt_text(result: dict, verification_status: str) -> str:
+    sum_total = f"{result['sum']:.2f}"  # Преобразуем число в строку с 2 знаками после запятой
 
     return (
-        f"Статус чека: <b>проверка пройдена✅</b>\n"
+        f"Статус чека: <b>{verification_status}</b>\n"
         f"Дата чека: <b>{result['date']}</b>\n"
         f"ФН: <b>{result['fn']}</b>\n"
         f"ФД: <b>{result['fd']}</b>\n"
