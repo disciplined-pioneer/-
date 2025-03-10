@@ -199,9 +199,9 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
 
     # Отправляем сообщение
     await call.message.edit_text(message, reply_markup=None)
-
-    # ВРЕМЕННО
     await call.message.answer(f"Данные о чеке: {data['answers_check']}\n\nДанные о событии: {data['answers']}\n\nДанные о пользователях: {data['participants']}")
+
+    await state.clear()
 
 
 # Обработка кнопки "✅ Сформировать документы по встрече"
@@ -242,7 +242,7 @@ async def skip_callback(call: CallbackQuery, state: FSMContext):
     print(result)
 
     for key, value in result.items():
-        add_data_to_cell('file.xlsx', key, value)
+        add_data_to_cell(r"data/advance_report.xlsx", key, value)
     
     # Используем FSInputFile для отправки файла
     file_path = r"data/advance_report.xlsx" 

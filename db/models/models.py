@@ -9,6 +9,7 @@ from core.database import async_db_session, Base
 from db.models.enum import *
 from db.models.mapped_columns import *
 
+
 T = TypeVar("T")
 
 
