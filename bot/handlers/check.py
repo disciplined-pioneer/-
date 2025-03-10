@@ -3,24 +3,16 @@ import re
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
-from aiogram.fsm.state import StatesGroup, State
+
 from core.bot import bot
 from bot.keyboards.check import *
 from integrations.check_info import CheckApi
 from datetime import datetime
 
+from bot.templates.check import *
+
 router = Router()
 check_api = CheckApi()
-
-# Состояние для чека
-class Check_photo(StatesGroup):
-    check = State()
-    asking = State()
-
-
-# Состояние для сохранения всех ответов
-class ReportManagement(StatesGroup):
-    awaiting_documents = State()
 
 
 # Функция для вывода успешного результата обработки чека
@@ -39,7 +31,7 @@ def format_receipt_text(result: dict) -> str:
 
 # Список вопросов для пользователя
 questions = {
-    'date': "Введите дату с чека в формате: ДД.ММ.ГГ ДД:ММ (например: 02.02.2020 15:30)",
+    'date': "Введите дату с чека в формате: ДД.ММ.ГГГГ ДД:ММ (например: 02.02.2020 15:30)",
     'sum': "Введите сумму с чека например 157.00 (157 рублей 00 копеек)",
     'fn': "Введите ФН",
     'fd': "Введите ФД",
@@ -57,7 +49,7 @@ async def handle_entertainment(callback: CallbackQuery, state: FSMContext):
     message = await bot.edit_message_text(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text="Отправьте фото чека, чтобы на нем был виден QR-код:",
+        text=request_receipt_photo_with_qr,
         reply_markup=start_back_butt
     )
 
@@ -82,7 +74,7 @@ async def handle_photo(message: Message, state: FSMContext):
     photo_id = message.photo[-1].file_id
     file = await bot.get_file(photo_id)
     img_url = f"https://api.telegram.org/file/bot{bot.token}/{file.file_path}"
-    msg = await message.answer("Пожалуйста, подождите, идёт получение данных о чеке…")
+    msg = await message.answer(waiting_for_receipt_data)
 
     # Удаляем сообщение с фото
     await message.delete()
@@ -119,7 +111,7 @@ async def handle_photo(message: Message, state: FSMContext):
         await bot.edit_message_text(
                 chat_id=message.chat.id, 
                 message_id=msg.message_id, 
-                text="Не удалось получить информацию о чеке\nМожете заполнить данные о чеке самостоятельно",
+                text=receipt_data_error,
                 reply_markup=fill_check_butt
             )
         
@@ -127,7 +119,7 @@ async def handle_photo(message: Message, state: FSMContext):
 # Если пользователь отправил не фото
 @router.message(Check_photo.check, F.text)
 async def handle_non_photo(message: Message):
-    await message.answer("Пожалуйста, отправьте фото чека, а не текст или другие файлы")
+    await message.answer(request_receipt_photo_only)
 
 
 # Обработка кнопки "Заполнить данные"
@@ -147,7 +139,8 @@ async def fill_details(callback: CallbackQuery, state: FSMContext):
     )
     
     await state.set_state(Check_photo.asking)
-    await state.update_data(bot_message_id=msg.message_id, bot_message_text=questions['date'])
+    await state.update_data(bot_message_id=msg.message_id,
+                            bot_message_text=questions['date'])
 
 
 # Обработка следующих вопросов по циклу
@@ -175,16 +168,15 @@ async def ask_next_question(message: Message, state: FSMContext):
             await message.delete()
 
             # Чтобы избежать ошибку при повторной неправильной дате
-            error_text = "Неверный формат даты. Пожалуйста, введите дату в формате ДД.MM.ГГГГ ЧЧ:ММ."
-            if bot_message_text != error_text:
+            if bot_message_text != invalid_date_format:
                 msg = await bot.edit_message_text(
                     chat_id=message.chat.id,
                     message_id=bot_message_id,
-                    text=error_text,
+                    text=invalid_date_format,
                     reply_markup=check_back_butt
                 )
                 await state.update_data(bot_message_id=msg.message_id,
-                                        bot_message_text=error_text)
+                                        bot_message_text=invalid_date_format)
             return
     
     # Проверка на правильную сумму
@@ -283,15 +275,10 @@ async def back(callback: CallbackQuery, state: FSMContext):
     print(f'\n{data}\n')
 
     # Отправляем сообщение пользователю
-    msg_text = (
-        "🎉 Ваш расход успешно добавлен в отчет!🎉"
-        "\n\n⬇️ Пожалуйста, прикрепите подтверждающие документы, нажав на кнопку ниже:"
-    )
-
     await bot.edit_message_text(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=msg_text,
+        text=expense_added_success,
         reply_markup=confirm_buttons
     )
 
