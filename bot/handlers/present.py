@@ -1,8 +1,10 @@
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, FSInputFile
+from aiogram.utils.media_group import MediaGroupBuilder
 from core.bot import bot
 from bot.handlers.events import generate_documents_callback
+from utils.events import process_data, add_data_to_cell
 from bot.keyboards.present import *
 
 from utils.present import *
@@ -140,17 +142,35 @@ async def confirm_document_callback(call: CallbackQuery, state: FSMContext):
 
     print(f"Данные пользователя: {user}")
 
-
     # Заполняем отчёт
-    if data['callback_data'] == 'report_gifts':
-        doc_path = "data/present_test.docx"
+    file_path = f"data/present_{call.from_user.id}.docx"
+    doc_path = "data/present.docx"
+    process_document(doc_path, data, user, file_path)
 
-    # Заполняем отчёт словами
-    process_document(doc_path, data, user)
 
-    # ВРЕМЕННО
-    await call.message.answer(f"Данные о чеке: {data['answers_check']}\n\nДанные о получателях: {data['answers']['gifts']}")
+    # Добавляем данные в таблицу excel
+    result = process_data(data)
+    for key, value in result.items():
+        add_data_to_cell(r"data/advance_report.xlsx", key, value)
+    file_path_excel = rf"data/advance_report.xlsx" 
 
+    # Пути к файлам
+    file_paths = [
+        file_path,
+        file_path_excel
+    ]
+
+    # Создаём медиа-группу
+    media_group = MediaGroupBuilder()
+
+    # Добавляем файлы в группу
+    for file_path in file_paths:
+        file = FSInputFile(file_path)
+        media_group.add_document(file)
+
+    # Отправляем все файлы одним сообщением
+    await call.message.answer_media_group(media_group.build())
+    await state.clear()
 
 # Обработчик кнопки "❌ Отменить"
 @router.callback_query(GiftReport.awaiting_document_confirmation, F.data == "cancel_document")

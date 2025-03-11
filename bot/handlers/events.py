@@ -1,6 +1,7 @@
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, FSInputFile
+from aiogram.utils.media_group import MediaGroupBuilder
 from core.bot import bot
 from bot.keyboards.events import *
 from bot.handlers.check import ReportManagement
@@ -8,6 +9,7 @@ from bot.keyboards.biznes_zavtrak import preparations_keyboard
 
 from utils.events import  *
 from bot.templates.events import *
+from bot.keyboards.present import new_expense_keyboard
 
 
 router = Router()
@@ -211,7 +213,7 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
         message = no_participants_for_document
 
     # Отправляем сообщение
-    await call.message.edit_text(message, reply_markup=None)
+    await call.message.edit_text(message, reply_markup=new_expense_keyboard)
 
 
     list_participants = [
@@ -251,14 +253,32 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
     # Сохраняем изменения только если doc был создан
     if doc:
         doc.save(file_path)
-        file = FSInputFile(file_path)
-        
-        await call.message.answer_document(
-            document=file,
-            caption='ВАШ ФАЙЛ'
-        )
 
-        await skip_callback(call, state)
+        # Добавляем данные в таблицу excel
+        result = process_data(data)
+        for key, value in result.items():
+            add_data_to_cell(r"data/advance_report.xlsx", key, value)
+        file_path_excel = rf"data/advance_report.xlsx" 
+
+        # Пути к файлам
+        file_paths = [
+            file_path,
+            file_path_excel
+        ]
+
+        # Создаём медиа-группу
+        media_group = MediaGroupBuilder()
+
+        # Добавляем файлы в группу
+        for file_path in file_paths:
+            file = FSInputFile(file_path)
+            media_group.add_document(file)
+
+        # Отправляем все файлы одним сообщением
+        await call.message.answer_media_group(media_group.build())
+
+    await state.clear()
+                
 
 
 # Обработка кнопки "✅ Сформировать документы по встрече"
