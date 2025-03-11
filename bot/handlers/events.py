@@ -33,6 +33,7 @@ async def generate_documents_callback(call: CallbackQuery, state: FSMContext):
 async def event_callback(call: CallbackQuery, state: FSMContext):
 
     # Сохраняем данные в ReportManagement и уст. состояние
+    await state.update_data(callback_data=call.data)
     data = await state.get_data()
     answers_check = data.get("answers_check", None)
     await state.update_data(answers_check=answers_check)    
@@ -182,6 +183,11 @@ async def cancel_action_two(callback: CallbackQuery, state: FSMContext):
     await skip_callback(callback, state)
 
 
+
+# ВОЗМОЖНО ПОМЕНЯТЬ ИМПОРТ В СВЯЗИ С РЕГЛАМЕНТОВ
+from db.crud.base import get_user_data
+
+
 # Обработчик нажатия кнопки "✅ Сформировать документы по встрече"
 @router.callback_query(ReportManagement.awaiting_documents, F.data == "generate_documents_tree")
 async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContext):
@@ -191,6 +197,13 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
     participants = data.get("participants", [])
     print(f"\nСостояние: {data}\n")
 
+    # Получаем данные о пользователе по его id
+    user_id = call.from_user.id
+    user_obj = await get_user_data(user_id)
+    user = user_obj.__dict__ if user_obj else {}
+
+    print(f"Данные пользователя: {user}")
+
     # Проверяем, есть ли участники
     if participants:
         message = meeting_document_created
@@ -199,8 +212,37 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
 
     # Отправляем сообщение
     await call.message.edit_text(message, reply_markup=None)
-    await call.message.answer(f"Данные о чеке: {data['answers_check']}\n\nДанные о событии: {data['answers']}\n\nДанные о пользователях: {data['participants']}")
 
+
+    list_participants = [
+        [str(i + 1), participant['guest_name'], participant['guest_workplace']]
+        for i, participant in enumerate(data['participants'])
+    ]
+    
+    # Заполняем отчёт
+    if data['callback_data'] == 'report_event':
+        doc_path = "data/events_test.docx"
+
+    # Заполняем отчёт словами
+    process_document(doc_path, data, user)
+    
+    # Заполняем отчёт в таблицах
+    file_path = "data/output.docx"
+    doc = Document(file_path)
+    
+    table_list = [0, 4]
+    for num_table in table_list:
+        table = doc.tables[num_table]
+
+        f = True
+        for data_user in list_participants:
+            if f:
+                f = False
+                update_last_row(table, data_user)
+            else:
+                add_row_with_borders(table, data_user)
+
+    doc.save(file_path) 
     await state.clear()
 
 

@@ -7,6 +7,9 @@ from bot.keyboards.present import *
 
 from utils.present import *
 from bot.templates.present import *
+from db.crud.base import *
+from utils.events import process_document
+
 
 router = Router()
 
@@ -16,6 +19,7 @@ router = Router()
 async def gifts_callback(call: CallbackQuery, state: FSMContext):
 
     # Сохраняем данные в GiftReport и уст. состояние
+    await state.update_data(callback_data=call.data)
     data = await state.get_data()
     print(f"\n{data}\n")
 
@@ -128,6 +132,21 @@ async def confirm_document_callback(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     print(f'\n{data}\n')
     await call.message.edit_text(meeting_document_creation_message, reply_markup=new_expense_keyboard)
+
+    # Получаем данные о пользователе по его id
+    user_id = call.from_user.id
+    user_obj = await get_user_data(user_id)
+    user = user_obj.__dict__ if user_obj else {}
+
+    print(f"Данные пользователя: {user}")
+
+
+    # Заполняем отчёт
+    if data['callback_data'] == 'report_gifts':
+        doc_path = "data/present_test.docx"
+
+    # Заполняем отчёт словами
+    process_document(doc_path, data, user)
 
     # ВРЕМЕННО
     await call.message.answer(f"Данные о чеке: {data['answers_check']}\n\nДанные о получателях: {data['answers']['gifts']}")

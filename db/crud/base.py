@@ -78,3 +78,25 @@ async def to_pydantic(pydantic_class: Type[BaseModel], data: Any, to_json: bool 
     except Exception as e:
         logging.exception(e)
         raise e
+
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from db.models.models import User
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
+from settings import settings
+
+engine = create_async_engine(settings.postgres.URL, echo=True)
+async_session_maker = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+
+async def get_user_data(user_id: int):
+    async with async_session_maker() as session:
+        try:
+            result = await session.execute(select(User).where(User.tg_id == user_id))
+            user = result.scalars().first()
+            await session.commit()  # Принудительный коммит
+            return user
+        except Exception as e:
+            print(f"Ошибка при запросе: {e}")
+            return None

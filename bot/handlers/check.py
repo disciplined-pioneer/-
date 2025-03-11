@@ -12,6 +12,8 @@ from utils.check import *
 
 from bot.templates.check import *
 
+from docx import Document
+
 router = Router()
 check_api = CheckApi()
 
