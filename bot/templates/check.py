@@ -1,7 +1,7 @@
 from aiogram.fsm.state import StatesGroup, State
 
 # Состояние для чека
-class Check_photo(StatesGroup):
+class Checkphoto(StatesGroup):
     check = State()
     asking = State()
 

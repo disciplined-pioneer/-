@@ -12,8 +12,6 @@ from utils.check import *
 
 from bot.templates.check import *
 
-from docx import Document
-
 router = Router()
 check_api = CheckApi()
 
@@ -34,11 +32,11 @@ async def handle_entertainment(callback: CallbackQuery, state: FSMContext):
 
     # Сохраняем ID сообщения, чтобы удалить его в следующем шаге
     await state.update_data(original_message_id=message.message_id, callback_data=callback.data)
-    await state.set_state(Check_photo.check)
+    await state.set_state(Checkphoto.check)
 
 
 # Обрабатываем фото чека
-@router.message(Check_photo.check, F.photo)
+@router.message(Checkphoto.check, F.photo)
 async def handle_photo(message: Message, state: FSMContext):
 
     # Получаем ID исходного сообщения, которое нужно удалить
@@ -107,7 +105,7 @@ async def handle_photo(message: Message, state: FSMContext):
         
 
 # Если пользователь отправил не фото
-@router.message(Check_photo.check, F.text)
+@router.message(Checkphoto.check, F.text)
 async def handle_non_photo(message: Message):
     await message.answer(request_receipt_photo_only)
 
@@ -127,13 +125,13 @@ async def fill_details(callback: CallbackQuery, state: FSMContext):
         reply_markup=check_back_butt
     )
     
-    await state.set_state(Check_photo.asking)
+    await state.set_state(Checkphoto.asking)
     await state.update_data(bot_message_id=msg.message_id,
                             bot_message_text=questions['date'])
 
 
 # Обработка следующих вопросов по циклу
-@router.message(Check_photo.asking, F.text)
+@router.message(Checkphoto.asking, F.text)
 async def ask_next_question(message: Message, state: FSMContext):
 
     # Получаем текущий вопрос и ответ
@@ -285,12 +283,12 @@ async def generate_report_check(callback: CallbackQuery, state: FSMContext):
     
 
 # Обработка кнопки "✅ Подтвердить" или "⬅️ Назад" в ReportManagement
-@router.callback_query(Check_photo.check, F.data == "confirm_receipt")
-@router.callback_query(Check_photo.asking, F.data == "confirm_receipt")
+@router.callback_query(Checkphoto.check, F.data == "confirm_receipt")
+@router.callback_query(Checkphoto.asking, F.data == "confirm_receipt")
 @router.callback_query(F.data == "report_back")
 async def back(callback: CallbackQuery, state: FSMContext):
 
-    # Получаем данные из Check_photo
+    # Получаем данные из Checkphoto
     data = await state.get_data()
     print(f'\n{data}\n')
 
@@ -304,8 +302,8 @@ async def back(callback: CallbackQuery, state: FSMContext):
 
 
 # Обработка кнопки "⬅️ Назад"
-@router.callback_query(Check_photo.asking, F.data == "check_back")
-@router.callback_query(Check_photo.check, F.data == "check_back")
+@router.callback_query(Checkphoto.asking, F.data == "check_back")
+@router.callback_query(Checkphoto.check, F.data == "check_back")
 async def back(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await handle_entertainment(callback, state)  # Передаем callback и state
