@@ -237,7 +237,6 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
 
     # После обработки слов - открываем файл и работаем с таблицами
     doc = Document(file_path)
-
     for num_table in table_list:
         table = doc.tables[num_table]
 
@@ -252,8 +251,14 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
     # Сохраняем изменения только если doc был создан
     if doc:
         doc.save(file_path)
+        file = FSInputFile(file_path)
+        
+        await call.message.answer_document(
+            document=file,
+            caption='ВАШ ФАЙЛ'
+        )
 
-        await state.clear()
+        await skip_callback(call, state)
 
 
 # Обработка кнопки "✅ Сформировать документы по встрече"
@@ -271,8 +276,6 @@ async def generate_documents_callback_two(call: CallbackQuery, state: FSMContext
         message = generate_meeting_confirmation_message(data, participants)
         if data.get('callback_data') == 'biznes_zavtrak_farmkruzhok':
             message += f"\n\n - Препарат: {data.get('selected_drug', 'Не выбран')}"
-
-
     else:
         message = "🚫 У вас нет добавленных участников."
 
@@ -291,8 +294,6 @@ async def skip_callback(call: CallbackQuery, state: FSMContext):
 
     # Добавляем данные в таблицу
     result = process_data(data)
-    print(result)
-
     for key, value in result.items():
         add_data_to_cell(r"data/advance_report.xlsx", key, value)
     
@@ -304,3 +305,5 @@ async def skip_callback(call: CallbackQuery, state: FSMContext):
         document=file,
         caption=advance_report_title
     )
+
+    await state.clear()
