@@ -109,7 +109,7 @@ months = [
 ]
 
 # Функция для обработки документа и замены данных
-def process_document(doc_path, data, user):
+def process_document(doc_path, data, user, file_path):
 
     # Загружаем существующий документ
     doc = Document(doc_path)
@@ -180,7 +180,7 @@ def process_document(doc_path, data, user):
                         cell.text = cell.text.replace(key, value)
 
     # Сохраняем изменения
-    doc.save("data/output.docx")
+    doc.save(file_path)
 
     print("Данные в файле Word заменены!")
 

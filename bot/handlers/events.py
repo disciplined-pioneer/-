@@ -220,12 +220,12 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
     ]
     
     # Определяем путь к файлу заранее
-    file_path = "data/output.docx"
+    file_path = f"data/output_{user_id}.docx"
     doc = None  
 
     # Заполняем отчёт в таблицах
     if data['callback_data'] == 'report_event':
-        doc_path = "data/events_test.docx"
+        doc_path = "data/events.docx"
         table_list = [0, 4]  
 
     else:
@@ -233,7 +233,7 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
         table_list = [0]
 
     # Заполняем отчёт словами
-    process_document(doc_path, data, user)
+    process_document(doc_path, data, user, file_path)
 
     # После обработки слов - открываем файл и работаем с таблицами
     doc = Document(file_path)
@@ -298,7 +298,7 @@ async def skip_callback(call: CallbackQuery, state: FSMContext):
         add_data_to_cell(r"data/advance_report.xlsx", key, value)
     
     # Используем FSInputFile для отправки файла
-    file_path = r"data/advance_report.xlsx" 
+    file_path = rf"data/advance_report_{call.from_user.id}.xlsx" 
     file = FSInputFile(file_path)
     
     await call.message.answer_document(
