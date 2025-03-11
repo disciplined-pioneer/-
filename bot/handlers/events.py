@@ -219,18 +219,25 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
         for i, participant in enumerate(data['participants'])
     ]
     
-    # Заполняем отчёт
+    # Определяем путь к файлу заранее
+    file_path = "data/output.docx"
+    doc = None  
+
+    # Заполняем отчёт в таблицах
     if data['callback_data'] == 'report_event':
         doc_path = "data/events_test.docx"
+        table_list = [0, 4]  
+
+    else:
+        doc_path = "data/business_breakfasts.docx"
+        table_list = [0]
 
     # Заполняем отчёт словами
     process_document(doc_path, data, user)
-    
-    # Заполняем отчёт в таблицах
-    file_path = "data/output.docx"
+
+    # После обработки слов - открываем файл и работаем с таблицами
     doc = Document(file_path)
-    
-    table_list = [0, 4]
+
     for num_table in table_list:
         table = doc.tables[num_table]
 
@@ -242,8 +249,11 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
             else:
                 add_row_with_borders(table, data_user)
 
-    doc.save(file_path) 
-    await state.clear()
+    # Сохраняем изменения только если doc был создан
+    if doc:
+        doc.save(file_path)
+
+        await state.clear()
 
 
 # Обработка кнопки "✅ Сформировать документы по встрече"
