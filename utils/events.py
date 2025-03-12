@@ -91,7 +91,8 @@ def add_data_to_cell(file_path, cell, value):
 
 
 questions_event = {
-    "event_location": ('Введите данные для заполнения шаблона:\n\n🏢 Место проведения:'),
+    "company_meeting": ('Введите данные для заполнения шаблона:\n\n💼 Компания, с которой планируется втреча:'),
+    "event_location": ('🏢 Место проведения:'),
     "meeting_theme": ("📝 Тема собрания. Введите тему: "),
     "guest_name": ("Пожалуйста, введите ФИО приглашенного участника: "),
     "guest_workplace": ("Пожалуйста, введите место работы для участника: ")
@@ -162,7 +163,8 @@ def process_document(doc_path, data, user, file_path):
         "{end_time}": end_time,
         "{name_holiday}": data.get('answers_check', {}).get('event', ""),
         "{gifts_text}": "\n".join(f"{gift}" for gift in data.get('answers', {}).get('gifts', "")),
-        "{selected_drug}": data.get('selected_drug', '')
+        "{selected_drug}": data.get('selected_drug', ''),
+        "{company_meeting}": data.get('answers', {}).get('company_meeting', "")
     }
 
     # Проходим по всем параграфам и заменяем текст
@@ -197,15 +199,25 @@ def set_cell_border(cell):
         border.set(ns.qn('w:color'), '000000')
         tc_pr.append(border)
 
+
 # Функция для добавления новой строки в таблицу
 def add_row_with_borders(table, data):
     new_row = table.add_row()  # Добавляем новую строку
+    num_cols = len(table.rows[0].cells)  # Количество колонок в таблице
+
+    # Если данных меньше, чем колонок — заполняем только доступные
     for col_idx, text in enumerate(data):
+        if col_idx >= num_cols:
+            print(f"⚠ Пропущен элемент '{text}', так как в таблице {num_cols} колонок")
+            continue
+
         cell = new_row.cells[col_idx]
         paragraph = cell.paragraphs[0]
-        run = paragraph.add_run(text)
+        run = paragraph.add_run(str(text))  # Преобразуем в строку (на случай чисел)
         run.font.size = Pt(11)  # Устанавливаем размер шрифта
         set_cell_border(cell)  # Устанавливаем границы
+
+
 
 # Функция для изменения данных последней строки таблицы
 def update_last_row(table, data):

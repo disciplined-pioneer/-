@@ -5,11 +5,15 @@ from aiogram.utils.media_group import MediaGroupBuilder
 from core.bot import bot
 from bot.keyboards.events import *
 from bot.handlers.check import ReportManagement
+
+from bot.keyboards.present import new_expense_keyboard
 from bot.keyboards.biznes_zavtrak import preparations_keyboard
+
+from collections import defaultdict
+from db.crud.base import get_user_data
 
 from utils.events import  *
 from bot.templates.events import *
-from bot.keyboards.present import new_expense_keyboard
 
 
 router = Router()
@@ -41,7 +45,7 @@ async def event_callback(call: CallbackQuery, state: FSMContext):
     await state.update_data(answers_check=answers_check)    
     await state.set_state(ReportManagement.awaiting_documents)
 
-    msg = await call.message.edit_text(questions_event['event_location'],
+    msg = await call.message.edit_text(questions_event['company_meeting'],
                                        reply_markup=event_back_keyboard)
 
     # Счётчик для вопросов и хранение ответов
@@ -72,7 +76,7 @@ async def ask_next_question(message: Message, state: FSMContext):
 
         # Добавляем ФИО участника к сообщению бота
         text = questions_event[list_key[current_question]]
-        if current_question == 3:
+        if current_question == 4:
             text += f'<b>{answers["guest_name"]}</b>'
 
         await message.delete()
@@ -116,10 +120,10 @@ async def back_question(callback: types.CallbackQuery, state: FSMContext):
     if current_question == 0:
         await generate_documents_callback(callback, state)
 
-    elif current_question == 3:
+    elif current_question == 4:
         
         # Удаление участника
-        current_question = 2
+        current_question = 3
         data = await state.get_data()
 
         await state.update_data(current_question=current_question)
@@ -145,7 +149,7 @@ async def add_participant_callback(call: CallbackQuery, state: FSMContext):
         return
 
     # Запускаем процесс ввода данных для нового участника, начиная с ФИО
-    await state.update_data(current_question=2,
+    await state.update_data(current_question=3,
                             participants_count=participants_count)
     
     await call.message.edit_text(questions_event['guest_name'],
@@ -185,11 +189,6 @@ async def cancel_action_two(callback: CallbackQuery, state: FSMContext):
     await skip_callback(callback, state)
 
 
-
-# ВОЗМОЖНО ПОМЕНЯТЬ ИМПОРТ В СВЯЗИ С РЕГЛАМЕНТОВ
-from db.crud.base import get_user_data
-
-
 # Обработчик нажатия кнопки "✅ Сформировать документы по встрече"
 @router.callback_query(ReportManagement.awaiting_documents, F.data == "generate_documents_tree")
 async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContext):
@@ -216,11 +215,12 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
     await call.message.edit_text(message, reply_markup=new_expense_keyboard)
 
 
-    list_participants = [
-        [str(i + 1), participant['guest_name'], participant['guest_workplace']]
-        for i, participant in enumerate(data['participants'])
-    ]
-    
+    # Группируем участников по их месту работы
+    company_dict = defaultdict(list)
+    for participant in data['participants']:
+        company_dict[participant['guest_workplace']].append(participant['guest_name'])
+    list_participants = dict(company_dict)
+
     # Определяем путь к файлу заранее
     file_path = f"data/output_{user_id}.docx"
     doc = None  
@@ -228,27 +228,35 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
     # Заполняем отчёт в таблицах
     if data['callback_data'] == 'report_event':
         doc_path = "data/events.docx"
-        table_list = [0, 4]  
+        table_list_our_company = [0, 4]  
+        table_list_another_company = [1, 5] 
 
     else:
         doc_path = "data/business_breakfasts.docx"
-        table_list = [0]
+        table_list_our_company = [0]
+        table_list_another_company = [1] 
 
     # Заполняем отчёт словами
     process_document(doc_path, data, user, file_path)
 
-    # После обработки слов - открываем файл и работаем с таблицами
+    # Открываем файл и работаем с таблицами
     doc = Document(file_path)
-    for num_table in table_list:
-        table = doc.tables[num_table]
 
-        f = True
-        for data_user in list_participants:
-            if f:
-                f = False
-                update_last_row(table, data_user)
-            else:
-                add_row_with_borders(table, data_user)
+    for idx, (company, employees) in enumerate(list_participants.items()):
+        tables = table_list_our_company if idx == 0 else table_list_another_company  # Выбираем нужные таблицы
+
+        for num_table in tables:
+            table = doc.tables[num_table]
+
+            if idx == 0:  # Если это наша компания
+                for i, employee in enumerate(employees, start=1):
+                    add_row_with_borders(table, [str(i), employee])  # Номер в первой колонке, имя во второй
+            else:  # Если это другая компания
+                update_last_row(table, [str(1), employees[0]])  # Первый сотрудник обновляет последнюю строку
+                for i, employee in enumerate(employees[1:], start=2):  # Остальных добавляем с нумерацией
+                    add_row_with_borders(table, [str(i), employee])  # Номер в первой колонке, имя во второй
+
+
 
     # Сохраняем изменения только если doc был создан
     if doc:
