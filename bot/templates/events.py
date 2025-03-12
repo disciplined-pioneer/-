@@ -2,10 +2,10 @@ enter_template_data = "Введите данные для заполнения �
 
 select_document_type = "✨ Выберите тип документа: ✨"
 
-def get_confirm_guest_addition(answers: dict) -> str:
+def get_confirm_guest_addition(answers: dict, response_text: str) -> str:
     return (
         f"📋 Вы добавили участника:\n\n• ФИО: <b>{answers['guest_name']}</b>"
-        f"\n• Место работы: <b>{answers['guest_workplace']}</b>"
+        f"\n• Место работы: <b>{response_text}</b>"
         "\n\n🤔 Подтвердите добавление участника"
     )
 

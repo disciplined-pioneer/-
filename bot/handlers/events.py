@@ -59,8 +59,6 @@ async def ask_next_question(message: Message, state: FSMContext):
     data = await state.get_data()
     current_question = data.get("current_question", 0)
     answers = data.get("answers", {})
-    participants_count = data.get("participants_count", 0)
-    participants = data.get("participants", [])
     bot_message_id = data.get("bot_message_id")
 
     # Сохраняем ответ на текущий вопрос
@@ -93,25 +91,50 @@ async def ask_next_question(message: Message, state: FSMContext):
         )
         
     else:
-        # Добавляем информацию об участнике в список
-        participants.append({
-            'guest_name': answers.get('guest_name'),
-            'guest_workplace': answers.get('guest_workplace')
-        })
-
-        # Обновляем количество участников
-        participants_count += 1
-        await state.update_data(participants_count=participants_count, participants=participants)
-
         await message.delete()
         await bot.edit_message_text(
             chat_id=message.chat.id,
             message_id=bot_message_id,
-            text=get_confirm_guest_addition(answers),
-            reply_markup=confirmation_keyboard,
+            text='НАЖМИ СУКА КНОПКУ',
+            reply_markup=get_company_keyboard(answers.get('company_meeting')),
             parse_mode="HTML"
         )
 
+
+# Обработка кнопок для выбора компании
+@router.callback_query(F.data.startswith("company_"))
+async def handle_company_callback(callback: types.CallbackQuery, state: FSMContext):
+
+    # Получаем данные из состояния
+    data = await state.get_data()
+    answers = data.get("answers", {})
+    participants = data.get("participants", [])
+
+    # Получаем текст нажатой кнопки
+    if callback.data == "company_alphasigma":
+        button_text = "ООО «Альфасигма Рус»"
+    elif callback.data == "company_meeting_choice":
+        button_text = answers.get("company_meeting")
+
+    # Добавляем нового участника
+    participants.append({
+        'guest_name': answers.get('guest_name', 'Неизвестно'),
+        'guest_workplace': button_text
+    })
+
+    # Обновляем состояние
+    await state.update_data(participants_count=len(participants), participants=participants)
+
+
+    # Редактируем предыдущее сообщение
+    await callback.message.edit_text(
+        text=get_confirm_guest_addition(answers, button_text),
+        reply_markup=confirmation_keyboard,
+        parse_mode="HTML"
+    )
+
+    await callback.answer()
+    
 
 # Обработка кнопки "⬅️ Назад" при заполнении вопросов
 @router.callback_query(ReportManagement.awaiting_documents, F.data == "question_event_back")
@@ -246,19 +269,21 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
     # Открываем файл и работаем с таблицами
     doc = Document(file_path)
 
-    for idx, (company, employees) in enumerate(list_participants.items()):
-        tables = table_list_our_company if idx == 0 else table_list_another_company  # Выбираем нужные таблицы
+    for company, employees in list_participants.items():
+        tables = table_list_our_company if company == "ООО «Альфасигма Рус»" else table_list_another_company  # Выбираем таблицы
 
         for num_table in tables:
             table = doc.tables[num_table]
 
-            if idx == 0:  # Если это наша компания
+            if company == "ООО «Альфасигма Рус»":  # Если это наша компания
                 for i, employee in enumerate(employees, start=1):
-                    add_row_with_borders(table, [str(i), employee])  # Номер в первой колонке, имя во второй
+                    add_row_with_borders(table, [str(i+1), employee])
+
             else:  # Если это другая компания
                 update_last_row(table, [str(1), employees[0]])  # Первый сотрудник обновляет последнюю строку
-                for i, employee in enumerate(employees[1:], start=2):  # Остальных добавляем с нумерацией
-                    add_row_with_borders(table, [str(i), employee])  # Номер в первой колонке, имя во второй
+                for i, employee in enumerate(employees[1:], start=2):
+                    add_row_with_borders(table, [str(i), employee])
+
 
     # Сохраняем изменения только если doc был создан
     if doc:
