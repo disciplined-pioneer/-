@@ -76,15 +76,19 @@ async def ask_next_question(message: Message, state: FSMContext):
 
         # Добавляем ФИО участника к сообщению бота
         text = questions_event[list_key[current_question]]
+        
         if current_question == 4:
             text += f'<b>{answers["guest_name"]}</b>'
+            keyboard = get_company_keyboard(answers.get('company_meeting'))
+        else:
+            keyboard = event_back_keyboard
 
         await message.delete()
         await bot.edit_message_text(
             chat_id=message.chat.id,
             message_id=bot_message_id,
             text=text,
-            reply_markup=event_back_keyboard,
+            reply_markup=keyboard,
             parse_mode="HTML"
         )
         
@@ -255,8 +259,6 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
                 update_last_row(table, [str(1), employees[0]])  # Первый сотрудник обновляет последнюю строку
                 for i, employee in enumerate(employees[1:], start=2):  # Остальных добавляем с нумерацией
                     add_row_with_borders(table, [str(i), employee])  # Номер в первой колонке, имя во второй
-
-
 
     # Сохраняем изменения только если doc был создан
     if doc:

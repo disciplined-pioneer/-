@@ -36,3 +36,14 @@ confirmation_keyboard_two = InlineKeyboardMarkup(
         [InlineKeyboardButton(text="❌ Отменить", callback_data="report_back")]
     ]
 )
+
+# Кнопки для выбора компании сотрудника
+def get_company_keyboard(another_company):
+    company_selection_keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="ООО «Альфасигма Рус»", callback_data="company_alphasigma")],
+            [InlineKeyboardButton(text=f"{another_company}", callback_data="company_meeting_choice")],
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="question_event_back")]
+        ]
+    )
+    return company_selection_keyboard
