@@ -161,10 +161,11 @@ def process_document(doc_path, data, user, file_path):
         "{middle_start_time}": middle_start_time,
         "{middle_end_time}": middle_end_time,
         "{end_time}": end_time,
-        "{name_holiday}": data.get('answers_check', {}).get('event', ""),
+        "{name_holiday}": data.get('answers', {}).get('event', ""),
         "{gifts_text}": "\n".join(f"{gift}" for gift in data.get('answers', {}).get('gifts', "")),
         "{selected_drug}": data.get('selected_drug', ''),
-        "{company_meeting}": data.get('answers', {}).get('company_meeting', "")
+        "{company_meeting}": data.get('answers', {}).get('company_meeting', ""),
+        "{name_gift}": data.get('answers', {}).get('name_gift', "")
     }
 
     # Проходим по всем параграфам и заменяем текст

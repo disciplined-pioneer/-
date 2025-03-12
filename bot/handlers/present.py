@@ -40,18 +40,44 @@ async def gifts_callback(call: CallbackQuery, state: FSMContext):
     await state.update_data(bot_message_id=msg.message_id)
     
     # Переходим к состоянию ожидания события
+    await state.set_state(GiftReport.awaiting_gift)
+
+
+# Обработчик ввода данных о навзаниии и количестве подарка
+@router.message(GiftReport.awaiting_gift, F.text)
+async def gift_message_handler(message: types.Message, state: FSMContext):
+
+    data = await state.get_data()
+    answers = data.get("answers", {})
+
+    # Сохраняем ответ о событии
+    answers["event"] = message.text
+
+    # Переходим к следующему вопросу
+    await state.update_data(answers=answers)
+
+    # Отправляем новый вопрос
+    await message.delete()
+    await bot.edit_message_text(
+        chat_id=message.chat.id,
+        message_id=data["bot_message_id"],
+        text=gift_recipients_prompt,
+        reply_markup=back_keyboard
+    )
+    
+    # Переходим к состоянию ожидания события
     await state.set_state(GiftReport.awaiting_event)
 
 
 # Обработчик ввода данных о событии
 @router.message(GiftReport.awaiting_event, F.text)
 async def event_message_handler(message: types.Message, state: FSMContext):
+
     data = await state.get_data()
-    
     answers = data.get("answers", {})
 
     # Сохраняем ответ о событии
-    answers["event"] = message.text
+    answers["name_gift"] = message.text
 
     # Переходим к следующему вопросу
     await state.update_data(answers=answers)
@@ -172,6 +198,7 @@ async def confirm_document_callback(call: CallbackQuery, state: FSMContext):
     await call.message.answer_media_group(media_group.build())
     await state.clear()
 
+
 # Обработчик кнопки "❌ Отменить"
 @router.callback_query(GiftReport.awaiting_document_confirmation, F.data == "cancel_document")
 async def cancel_document_callback(call: CallbackQuery, state: FSMContext):
@@ -233,6 +260,7 @@ async def back_callback(call: CallbackQuery, state: FSMContext):
             something_went_wrong,
             reply_markup=gift_info_keyboard
         )
+
 
 # Обработчик кнопки "⬅️ Назад"
 @router.callback_query(F.data == "report_back_two")

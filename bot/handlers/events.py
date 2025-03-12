@@ -91,14 +91,17 @@ async def ask_next_question(message: Message, state: FSMContext):
         )
         
     else:
-        await message.delete()
-        await bot.edit_message_text(
-            chat_id=message.chat.id,
-            message_id=bot_message_id,
-            text='НАЖМИ СУКА КНОПКУ',
-            reply_markup=get_company_keyboard(answers.get('company_meeting')),
-            parse_mode="HTML"
-        )
+        try:
+            await message.delete()
+            await bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=bot_message_id,
+                text=instruction_text + f'<b>{answers["guest_name"]}</b>',
+                reply_markup=get_company_keyboard(answers.get('company_meeting')),
+                parse_mode="HTML"
+            )
+        except:
+            pass
 
 
 # Обработка кнопок для выбора компании
