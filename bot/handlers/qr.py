@@ -41,7 +41,7 @@ async def send_qr(call: CallbackQuery, state: FSMContext):
 @router.message(tqr.QRState.qr)
 async def get_qr(message: Message, state: FSMContext):
     """
-        Получени qr
+        Получение qr
     :param message: Message
     :param state: FSMContext
     """
@@ -67,6 +67,7 @@ async def get_qr(message: Message, state: FSMContext):
             reply_markup=tqr.manual_filling_ikb()
         )
 
+    # Продолжить, либо же завершить чек
     await state_data['last_msg'].edit_text(
         text=tqr.check_added_text,
         reply_markup=tqr.check_added_ikb()
@@ -304,6 +305,7 @@ async def confirm_check(call: CallbackQuery, state: FSMContext):
     await state.clear()
 
 
+# Завершение отчёта
 @router.callback_query(F.data == 'create_report')
 async def create_report_call(call: CallbackQuery, state: FSMContext):
     """
@@ -311,7 +313,11 @@ async def create_report_call(call: CallbackQuery, state: FSMContext):
     :param call: CallbackQuery
     :param state: FSMContext
     """
+
+    # Подтверждение чека
     await confirm_check(call, state)
+
+    # Создание отчёта
     path = await create_report(call.from_user.id)
 
     await call.message.delete()

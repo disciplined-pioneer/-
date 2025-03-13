@@ -31,7 +31,8 @@ async def handle_entertainment(callback: CallbackQuery, state: FSMContext):
     )
 
     # Сохраняем ID сообщения, чтобы удалить его в следующем шаге
-    await state.update_data(original_message_id=message.message_id, callback_data=callback.data)
+    await state.update_data(original_message_id=message.message_id,
+                            callback_data=callback.data)
     await state.set_state(Checkphoto.check)
 
 
@@ -59,12 +60,12 @@ async def handle_photo(message: Message, state: FSMContext):
     # Получаем данные чека
     check_info = await check_api.info_by_img(img_url)
     try:
-        data = check_info["request"]["manual"]
+        data_qr = check_info["request"]["manual"]
         date = datetime.strptime(check_info["data"]["json"]["dateTime"], "%Y-%m-%dT%H:%M:%S")
-        fn = data["fn"]
-        fd = data["fd"]
-        fp = data["fp"]
-        sum_total = data["sum"]
+        fn = data_qr["fn"]
+        fd = data_qr["fd"]
+        fp = data_qr["fp"]
+        sum_total = data_qr["sum"]
 
         result = {'date': date,
                   'fn': fn,
@@ -82,7 +83,6 @@ async def handle_photo(message: Message, state: FSMContext):
                 reply_markup=response_keyboard,
                 parse_mode="HTML"
             )
-            await state.update_data(answers_check=result)
 
         else:
             result_text = format_receipt_text(result, 'проверка пройдена ✅')
@@ -93,7 +93,45 @@ async def handle_photo(message: Message, state: FSMContext):
                 reply_markup=confirm_receipt_butt,
                 parse_mode="HTML"
             )
-            await state.update_data(answers_check=result)
+
+        # Определяем категорию
+        if data.get('callback_data') == "entertainment":
+            expense_type = 'Представительские расходы'
+        else:
+            expense_type = 'Бизнес-завтрак / Фармкружок'
+        
+        await state.update_data(answers_check=result,
+                                expense_type=expense_type,
+                                check_data=check_info)
+        data = await state.get_data()
+        print(f"\nСостояние: {data}\n")
+
+        from db.models.models import Check, User
+        state_data = await state.get_data()
+        user = await User.get(tg_id=message.from_user.id)
+
+        if state_data.get('check_data'):
+            await Check.create(
+                user_id=user.id,
+                date=datetime.strptime(
+                    state_data['check_data']['data']['json']['dateTime'],
+                    '%Y-%m-%dT%H:%M:%S'
+                ),
+                fd=state_data['check_data']['request']['manual']['fd'],
+                fn=state_data['check_data']['request']['manual']['fn'],
+                fp=state_data['check_data']['request']['manual']['fp'],
+                kkt_reg_id=state_data['check_data']['data']['json'].get('kktRegId'),
+                inn=state_data['check_data']['data']['json'].get('userInn'),
+                salesman=state_data['check_data']['data']['json'].get('user'),
+                operator=state_data['check_data']['data']['json'].get('operator'),
+                address=state_data['check_data']['data']['json']['metadata'].get('address'),
+                sum=state_data['check_data']['data']['json'].get('totalSum'),
+                nds=get_nds(state_data['check_data']),
+                type=state_data['expense_type']
+            )
+
+
+        
 
     except KeyError:
         await bot.edit_message_text(
