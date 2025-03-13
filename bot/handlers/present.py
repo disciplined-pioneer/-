@@ -171,35 +171,18 @@ async def confirm_document_callback(call: CallbackQuery, state: FSMContext):
     # Заполняем отчёт
     file_path = f"data/present_{call.from_user.id}.docx"
     doc_path = "data/present.docx"
-    process_document(doc_path, data, user, file_path)
-    convert_docx_to_pdf(file_path, "data/present.pdf")
+    await process_document(doc_path, data, user, file_path)
+    convert_docx_to_pdf(file_path, f"data/present_{user_id}.pdf")
 
-    # Создание отчёта
-    file_path_excel = await create_report(call.from_user.id)
-
-    # Пути к файлам
-    file_paths = [
-        "data/present.pdf",
-        file_path_excel
-    ]
-
-    # Создаём медиа-группу
-    media_group = MediaGroupBuilder()
-
-    # Добавляем файлы в группу
-    for path in file_paths:
-        file = FSInputFile(path)
-        media_group.add_document(file)
-
-    # Отправляем все файлы одним сообщением
-    await call.message.edit_text(meeting_document_creation_message, reply_markup=new_expense_keyboard)
-    await call.message.answer_media_group(media_group.build())
+    await call.message.delete()
+    await call.message.answer_document(
+        caption=meeting_document_creation_message,
+        document=FSInputFile(f"data/present_{user_id}.pdf"),
+        reply_markup=new_expense_keyboard
+    )
 
     os.remove(file_path)
-    os.remove(file_path_excel)
-    os.remove("data/present.pdf")
-
-    await state.clear()
+    os.remove(f"data/present_{user_id}.pdf")
 
 
 # Обработчик кнопки "❌ Отменить"

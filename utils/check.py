@@ -1,5 +1,6 @@
+import asyncio
 from datetime import datetime
-from db.models.models import Check, User
+from db.models.models import Check
 
 def get_nds(check_data: dict) -> int:
     data = check_data['data']['json']
@@ -91,3 +92,10 @@ async def save_check_to_db(state_data, user_id):
             fp=state['fp'],
             type=state['expense_type']
         )
+        
+        
+async def get_last_check_id():
+    checks = await Check.all()  # Дожидаемся результата
+    check_ids = [check.id for check in checks]  # Извлекаем все ID
+    last_check_id = max(check_ids) if check_ids else 0  # Берем максимальный ID
+    return int(last_check_id)

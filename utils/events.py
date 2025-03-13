@@ -1,8 +1,10 @@
 import os
 import math
 import locale
+import asyncio
 import comtypes.client
 from datetime import datetime, timedelta
+from utils.check import get_last_check_id
 
 from docx import Document
 from docx.shared import Pt
@@ -97,7 +99,7 @@ months = [
 ]
 
 # Функция для обработки документа и замены данных
-def process_document(doc_path, data, user, file_path):
+async def process_document(doc_path, data, user, file_path):
 
     # Загружаем существующий документ
     doc = Document(doc_path)
@@ -133,6 +135,7 @@ def process_document(doc_path, data, user, file_path):
     middle_start_time = subtract_hours_from_time(date_compilation, hours=2)
     middle_end_time = subtract_hours_from_time(date_compilation, hours=1)
     end_time = subtract_hours_from_time(date_compilation, hours=2)
+    last_check_id = await get_last_check_id()
 
     # Данные для замены
     placeholders = {
@@ -152,7 +155,8 @@ def process_document(doc_path, data, user, file_path):
         "{gifts_text}": "\n".join(f"{gift}" for gift in data.get('answers', {}).get('gifts', "")),
         "{selected_drug}": data.get('selected_drug', ''),
         "{company_meeting}": data.get('answers', {}).get('company_meeting', ""),
-        "{name_gift}": data.get('answers', {}).get('name_gift', "")
+        "{name_gift}": data.get('answers', {}).get('name_gift', ""),
+        "{number_check}": str(last_check_id + 1)
     }
 
     # Проходим по всем параграфам и заменяем текст

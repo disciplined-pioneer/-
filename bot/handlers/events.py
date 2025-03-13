@@ -1,7 +1,6 @@
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, FSInputFile
-from aiogram.utils.media_group import MediaGroupBuilder
 from core.bot import bot
 from bot.keyboards.events import *
 from bot.handlers.check import ReportManagement
@@ -11,6 +10,7 @@ from bot.keyboards.biznes_zavtrak import preparations_keyboard
 
 from collections import defaultdict
 from db.crud.base import get_user_data
+from bot.handlers.expenses import choose_expense
 
 import os
 from utils.report import create_report
@@ -266,7 +266,7 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
         table_list_another_company = [1] 
 
     # Заполняем отчёт словами
-    process_document(doc_path, data, user, file_path)
+    await process_document(doc_path, data, user, file_path)
 
     # Открываем файл и работаем с таблицами
     doc = Document(file_path)
@@ -289,37 +289,18 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
 
     # Сохраняем изменения только если doc был создан
     if doc:
-
         doc.save(file_path)
-        convert_docx_to_pdf(file_path, "data/events.pdf")
+        convert_docx_to_pdf(file_path, f"data/events_{user_id}.pdf")
 
-        # Создание отчёта
-        file_path_excel = await create_report(call.from_user.id)
-
-        # Пути к файлам
-        file_paths = [
-            "data/events.pdf",
-            file_path_excel
-        ]
-
-        # Создаём медиа-группу
-        media_group = MediaGroupBuilder()
-
-        # Добавляем файлы в группу
-        for path in file_paths:
-            file = FSInputFile(path)
-            media_group.add_document(file)
-
-        # Отправляем все файлы одним сообщением
-        await call.message.edit_text(message, reply_markup=new_expense_keyboard)
-        await call.message.answer_media_group(media_group.build())
+        await call.message.delete()
+        await call.message.answer_document(
+            caption=message,
+            document=FSInputFile(f"data/events_{user_id}.pdf"),
+            reply_markup=new_expense_keyboard
+        )
 
         os.remove(file_path)
-        os.remove(file_path_excel)
-        os.remove("data/events.pdf")
-
-    await state.clear()
-                
+        os.remove(f"data/events_{user_id}.pdf")
 
 
 # Обработка кнопки "✅ Сформировать документы по встрече"
@@ -342,6 +323,13 @@ async def generate_documents_callback_two(call: CallbackQuery, state: FSMContext
 
     # Отправляем информацию о всех участниках
     await call.message.edit_text(message, reply_markup=confirmation_keyboard_two , parse_mode="HTML")
+
+
+# Обработка кнопки ✅ Да, добавить новый расход
+@router.callback_query(F.data == "next_point")
+async def next_point(call: CallbackQuery, state: FSMContext):
+    await call.message.delete()
+    await choose_expense(call, state)
 
 
 # Обработка кнопки "Пропустить"

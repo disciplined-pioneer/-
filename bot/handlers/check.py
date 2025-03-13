@@ -3,6 +3,7 @@ import re
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
+from db.models.models import User
 
 from core.bot import bot
 from bot.keyboards.check import *

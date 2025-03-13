@@ -30,7 +30,7 @@ conf_keyboard = InlineKeyboardMarkup(
 
 new_expense_keyboard = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Да, добавить новый расход", callback_data="var2")],
+        [InlineKeyboardButton(text="✅ Да, добавить новый расход", callback_data="next_point")],
         [InlineKeyboardButton(text="❌ Нет, завершить отчет", callback_data="skip")]
     ]
 )
