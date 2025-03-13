@@ -13,6 +13,8 @@ from utils.check import *
 
 from bot.templates.check import *
 
+from bot.templates.qr import check_added_text, check_added_ikb
+
 router = Router()
 check_api = CheckApi()
 
@@ -286,18 +288,28 @@ async def generate_report_check(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "report_back")
 async def back(callback: CallbackQuery, state: FSMContext):
 
+    data = await state.get_data()
+
+    if data.get("callback_data") in ('expense_hotel_services', 'expense_other', 'expense_taxi'):
+        message = check_added_text
+        button = check_added_ikb()
+        data['expense_type'] = data['type']
+    else:
+        message = expense_added_success
+        button = confirm_buttons
+
     # Сохраняем чек в БД
     user = await User.get(tg_id=callback.from_user.id)
-    await save_check_to_db(await state.get_data(), user.id)
+    await save_check_to_db(data, user.id)
 
-    print(f"\nСостояние: {await state.get_data()}\n")
+    print(f"\nСостояние: {data}\n")
 
     # Отправляем сообщение пользователю
     await bot.edit_message_text(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=expense_added_success,
-        reply_markup=confirm_buttons
+        text=message,
+        reply_markup=button
     )
 
 
