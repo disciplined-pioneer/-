@@ -60,21 +60,9 @@ async def handle_photo(message: Message, state: FSMContext):
     # Получаем данные чека
     check_info = await check_api.info_by_img(img_url)
     try:
-        data_qr = check_info["request"]["manual"]
-        date = datetime.strptime(check_info["data"]["json"]["dateTime"], "%Y-%m-%dT%H:%M:%S")
-        fn = data_qr["fn"]
-        fd = data_qr["fd"]
-        fp = data_qr["fp"]
-        sum_total = data_qr["sum"]
-
-        result = {'date': date,
-                  'fn': fn,
-                  'fd': fd,
-                  'fp': fp,
-                  'sum': float(sum_total)}
+        result = await extract_receipt_data(check_info)
+        request = await check_api.info_by_raw(fn=result['fn'], fp=result['fp'], fd=result['fd'], date=result['date'], sum=result['sum'], type=1)
         
-        # Проверяем чек
-        request = await check_api.info_by_raw(fn=fn, fp=fp, fd=fd, date=date, sum=sum_total, type=1)
         if request.get('error'):
             await bot.edit_message_text(
                 chat_id=message.chat.id,
@@ -83,55 +71,20 @@ async def handle_photo(message: Message, state: FSMContext):
                 reply_markup=response_keyboard,
                 parse_mode="HTML"
             )
+            return
 
-        else:
-            result_text = format_receipt_text(result, 'проверка пройдена ✅')
-            await bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=msg.message_id,
-                text=result_text,
-                reply_markup=confirm_receipt_butt,
-                parse_mode="HTML"
-            )
+        result_text = format_receipt_text(result, 'проверка пройдена ✅')
+        await bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=msg.message_id,
+            text=result_text,
+            reply_markup=confirm_receipt_butt,
+            parse_mode="HTML"
+        )
 
-        # Определяем категорию
-        if data.get('callback_data') == "entertainment":
-            expense_type = 'Представительские расходы'
-        else:
-            expense_type = 'Бизнес-завтрак / Фармкружок'
-        
-        await state.update_data(answers_check=result,
-                                expense_type=expense_type,
-                                check_data=check_info)
-        data = await state.get_data()
-        print(f"\nСостояние: {data}\n")
-
-        from db.models.models import Check, User
-        state_data = await state.get_data()
-        user = await User.get(tg_id=message.from_user.id)
-
-        if state_data.get('check_data'):
-            await Check.create(
-                user_id=user.id,
-                date=datetime.strptime(
-                    state_data['check_data']['data']['json']['dateTime'],
-                    '%Y-%m-%dT%H:%M:%S'
-                ),
-                fd=state_data['check_data']['request']['manual']['fd'],
-                fn=state_data['check_data']['request']['manual']['fn'],
-                fp=state_data['check_data']['request']['manual']['fp'],
-                kkt_reg_id=state_data['check_data']['data']['json'].get('kktRegId'),
-                inn=state_data['check_data']['data']['json'].get('userInn'),
-                salesman=state_data['check_data']['data']['json'].get('user'),
-                operator=state_data['check_data']['data']['json'].get('operator'),
-                address=state_data['check_data']['data']['json']['metadata'].get('address'),
-                sum=state_data['check_data']['data']['json'].get('totalSum'),
-                nds=get_nds(state_data['check_data']),
-                type=state_data['expense_type']
-            )
-
-
-        
+        # Обновляем состояние
+        expense_type = await determine_expense_type((await state.get_data()).get('callback_data'))
+        await state.update_data(answers_check=result, expense_type=expense_type, check_data=check_info)
 
     except KeyError:
         await bot.edit_message_text(
@@ -277,6 +230,11 @@ async def ask_next_question(message: Message, state: FSMContext):
         fd = result['fd']
         fp = result['fp']
 
+        # Сохраняем тип чека
+        expense_type = await determine_expense_type((await state.get_data()).get('callback_data'))
+        answers_check['expense_type'] = expense_type
+        await state.update_data(answers_check=answers_check)
+
         result = {'date': date,
                   'fn': fn,
                   'fd': fd,
@@ -293,6 +251,7 @@ async def ask_next_question(message: Message, state: FSMContext):
                 reply_markup=response_keyboard,
                 parse_mode="HTML"
             )
+
         else:
             result_text = format_receipt_text(result, 'проверка пройдена ✅')
             await bot.edit_message_text(
@@ -326,9 +285,11 @@ async def generate_report_check(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "report_back")
 async def back(callback: CallbackQuery, state: FSMContext):
 
-    # Получаем данные из Checkphoto
-    data = await state.get_data()
-    print(f'\n{data}\n')
+    # Сохраняем чек в БД
+    user = await User.get(tg_id=callback.from_user.id)
+    await save_check_to_db(await state.get_data(), user.id)
+
+    print(f"\nСостояние: {await state.get_data()}\n")
 
     # Отправляем сообщение пользователю
     await bot.edit_message_text(
