@@ -81,7 +81,6 @@ async def save_check_to_db(state_data, user_id):
         )
 
     except KeyError:
-        print('попал')
         state = state_data['answers_check']
         await Check.create(
             user_id=user_id,

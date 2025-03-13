@@ -4,7 +4,7 @@ from aiogram.types import CallbackQuery, FSInputFile
 from aiogram.utils.media_group import MediaGroupBuilder
 from core.bot import bot
 from bot.handlers.events import generate_documents_callback
-from utils.events import process_data, add_data_to_cell
+from utils.events import process_data
 from bot.keyboards.present import *
 
 from utils.present import *
@@ -177,7 +177,7 @@ async def confirm_document_callback(call: CallbackQuery, state: FSMContext):
     # Добавляем данные в таблицу excel
     result = process_data(data)
     for key, value in result.items():
-        add_data_to_cell(r"data/advance_report.xlsx", key, value)
+        pass
     file_path_excel = rf"data/advance_report.xlsx" 
 
     # Пути к файлам

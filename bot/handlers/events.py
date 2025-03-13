@@ -12,6 +12,9 @@ from bot.keyboards.biznes_zavtrak import preparations_keyboard
 from collections import defaultdict
 from db.crud.base import get_user_data
 
+import os
+from utils.report import create_report
+
 from utils.events import  *
 from bot.templates.events import *
 
@@ -292,11 +295,14 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
     if doc:
         doc.save(file_path)
 
-        # Добавляем данные в таблицу excel
-        result = process_data(data)
-        for key, value in result.items():
-            add_data_to_cell(r"data/advance_report.xlsx", key, value)
-        file_path_excel = rf"data/advance_report.xlsx" 
+        # Создание отчёта
+        file_path_excel = await create_report(call.from_user.id)
+
+        await call.message.delete()
+        await call.message.answer_document(
+            caption=advance_report_generated,
+            document=FSInputFile(file_path_excel)
+        )
 
         # Пути к файлам
         file_paths = [
@@ -314,6 +320,8 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
 
         # Отправляем все файлы одним сообщением
         await call.message.answer_media_group(media_group.build())
+
+        os.remove(file_path)
 
     await state.clear()
                 
@@ -345,23 +353,14 @@ async def generate_documents_callback_two(call: CallbackQuery, state: FSMContext
 @router.callback_query(F.data == "skip")
 async def skip_callback(call: CallbackQuery, state: FSMContext):
 
-    await call.message.edit_text(advance_report_generated)
+    # Создание отчёта
+    path = await create_report(call.from_user.id)
 
-    data = await state.get_data()
-    print(f"\nСостояние: {data}\n")
-
-    # Добавляем данные в таблицу
-    result = process_data(data)
-    for key, value in result.items():
-        add_data_to_cell(r"data/advance_report.xlsx", key, value)
-    
-    # Используем FSInputFile для отправки файла
-    file_path = rf"data/advance_report_{call.from_user.id}.xlsx" 
-    file = FSInputFile(file_path)
-    
+    await call.message.delete()
     await call.message.answer_document(
-        document=file,
-        caption=advance_report_title
+        caption=advance_report_generated,
+        document=FSInputFile(path)
     )
 
+    os.remove(path)
     await state.clear()
