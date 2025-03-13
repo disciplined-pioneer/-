@@ -1,10 +1,12 @@
+import os
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, FSInputFile
 from aiogram.utils.media_group import MediaGroupBuilder
 from core.bot import bot
 from bot.handlers.events import generate_documents_callback
-from utils.events import process_data
+from utils.events import convert_docx_to_pdf
+from utils.report import create_report
 from bot.keyboards.present import *
 
 from utils.present import *
@@ -159,30 +161,25 @@ async def confirm_document_callback(call: CallbackQuery, state: FSMContext):
     # Создаем документ
     data = await state.get_data()
     print(f'\n{data}\n')
-    await call.message.edit_text(meeting_document_creation_message, reply_markup=new_expense_keyboard)
+    await call.message.edit_text("Пожалуйста подождите. Ваш отчёт заполняется...")
 
     # Получаем данные о пользователе по его id
     user_id = call.from_user.id
     user_obj = await get_user_data(user_id)
     user = user_obj.__dict__ if user_obj else {}
 
-    print(f"Данные пользователя: {user}")
-
     # Заполняем отчёт
     file_path = f"data/present_{call.from_user.id}.docx"
     doc_path = "data/present.docx"
     process_document(doc_path, data, user, file_path)
+    convert_docx_to_pdf(file_path, "data/present.pdf")
 
-
-    # Добавляем данные в таблицу excel
-    result = process_data(data)
-    for key, value in result.items():
-        pass
-    file_path_excel = rf"data/advance_report.xlsx" 
+    # Создание отчёта
+    file_path_excel = await create_report(call.from_user.id)
 
     # Пути к файлам
     file_paths = [
-        file_path,
+        "data/present.pdf",
         file_path_excel
     ]
 
@@ -190,12 +187,18 @@ async def confirm_document_callback(call: CallbackQuery, state: FSMContext):
     media_group = MediaGroupBuilder()
 
     # Добавляем файлы в группу
-    for file_path in file_paths:
-        file = FSInputFile(file_path)
+    for path in file_paths:
+        file = FSInputFile(path)
         media_group.add_document(file)
 
     # Отправляем все файлы одним сообщением
+    await call.message.edit_text(meeting_document_creation_message, reply_markup=new_expense_keyboard)
     await call.message.answer_media_group(media_group.build())
+
+    os.remove(file_path)
+    os.remove(file_path_excel)
+    os.remove("data/present.pdf")
+
     await state.clear()
 
 

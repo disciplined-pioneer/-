@@ -1,16 +1,17 @@
+import os
+import math
 import locale
-import openpyxl
-
+import comtypes.client
+from datetime import datetime, timedelta
 
 from docx import Document
-from datetime import datetime, timedelta
-import math
-from num2words import num2words
-
 from docx.shared import Pt
+from num2words import num2words
 from docx.oxml import OxmlElement, ns
 
+
 MAX_PARTICIPANTS = 10  # Максимальное количество участников
+
 
 # Функция для преобразования суммы в текст
 def convert_number_to_text(number):
@@ -216,3 +217,13 @@ def update_last_row(table, data):
             for run in paragraph.runs:
                 run.font.size = Pt(11)  # Устанавливаем размер шрифта
         set_cell_border(cell)  # Устанавливаем границы
+
+
+def convert_docx_to_pdf(input_path, output_path):
+    word = comtypes.client.CreateObject("Word.Application")
+    word.Visible = False  # Запуск в фоне
+
+    doc = word.Documents.Open(os.path.abspath(input_path))
+    doc.SaveAs(os.path.abspath(output_path), FileFormat=17)  # 17 = wdFormatPDF
+    doc.Close()
+    word.Quit()

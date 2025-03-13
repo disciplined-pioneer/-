@@ -229,6 +229,8 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
     # Получаем данные состояния
     data = await state.get_data()
     participants = data.get("participants", [])
+    await call.message.edit_text("Пожалуйста подождите. Ваш отчёт заполняется...")
+
     print(f"\nСостояние: {data}\n")
 
     # Получаем данные о пользователе по его id
@@ -236,17 +238,11 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
     user_obj = await get_user_data(user_id)
     user = user_obj.__dict__ if user_obj else {}
 
-    print(f"Данные пользователя: {user}")
-
     # Проверяем, есть ли участники
     if participants:
         message = meeting_document_created
     else:
         message = no_participants_for_document
-
-    # Отправляем сообщение
-    await call.message.edit_text(message, reply_markup=new_expense_keyboard)
-
 
     # Группируем участников по их месту работы
     company_dict = defaultdict(list)
@@ -293,20 +289,16 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
 
     # Сохраняем изменения только если doc был создан
     if doc:
+
         doc.save(file_path)
+        convert_docx_to_pdf(file_path, "data/events.pdf")
 
         # Создание отчёта
         file_path_excel = await create_report(call.from_user.id)
 
-        await call.message.delete()
-        await call.message.answer_document(
-            caption=advance_report_generated,
-            document=FSInputFile(file_path_excel)
-        )
-
         # Пути к файлам
         file_paths = [
-            file_path,
+            "data/events.pdf",
             file_path_excel
         ]
 
@@ -314,14 +306,17 @@ async def generate_documents_tree_callback(call: CallbackQuery, state: FSMContex
         media_group = MediaGroupBuilder()
 
         # Добавляем файлы в группу
-        for file_path in file_paths:
-            file = FSInputFile(file_path)
+        for path in file_paths:
+            file = FSInputFile(path)
             media_group.add_document(file)
 
         # Отправляем все файлы одним сообщением
+        await call.message.edit_text(message, reply_markup=new_expense_keyboard)
         await call.message.answer_media_group(media_group.build())
 
         os.remove(file_path)
+        os.remove(file_path_excel)
+        os.remove("data/events.pdf")
 
     await state.clear()
                 
