@@ -12,7 +12,8 @@ start_options.add(
     InlineKeyboardButton(text="Канцтовары", callback_data="stationery"),
     InlineKeyboardButton(text="Представительские расходы", callback_data="entertainment"),
     InlineKeyboardButton(text="Бизнес-завтрак/Фармкружок", callback_data="biznes_zavtrak_farmkruzhok"),
-    InlineKeyboardButton(text="Командировочные", callback_data="business_trips")
+    InlineKeyboardButton(text="Командировочные", callback_data="business_trips"),
+    InlineKeyboardButton(text="Расходы в иностранной валюте", callback_data="expense_foreign_currency")
 )
 start_options.adjust(1, 1)
 

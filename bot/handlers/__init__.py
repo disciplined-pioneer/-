@@ -9,6 +9,7 @@ from .events import router as entertainment
 from .present import router as present
 from .biznes_zavtrak import router as biznes
 from .business_trips import router as trips
+from .foreign_expenses import router as foreign
 
 routers = [
     auth,
@@ -21,5 +22,6 @@ routers = [
     entertainment,
     present,
     biznes,
-    trips
+    trips,
+    foreign
 ]
