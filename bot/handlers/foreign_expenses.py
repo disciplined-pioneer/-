@@ -5,6 +5,7 @@ from aiogram import F, Router, types
 from bot.keyboards.foreign_expenses import *
 from bot.templates.foreign_expenses import *
 from core.bot import bot
+from db.models.models import Check, User
 
 
 router = Router()
@@ -74,7 +75,20 @@ async def process_foreign_amount(message: types.Message, state: FSMContext):
 
 @router.callback_query(F.data == "confirm_foreign")
 async def confirm_expense(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
     keyboard = await get_finish_keyboard()
+
+    # Добавляем в БД
+    user = await User.get(tg_id=callback.from_user.id)
+    await Check.create(
+        user_id=user.id,
+        date=datetime.utcnow(),
+        sum=int(data['rub_amount'])*100,
+        fn="default_fn",
+        fd="default_fd",
+        fp="default_fp",
+        type="Расходы в иностранной валюте" + data['expense_type']
+    )
     
     # Редактируем предыдущее сообщение вместо удаления
     await callback.message.edit_text(
@@ -114,19 +128,6 @@ async def process_rub_amount(message: types.Message, state: FSMContext):
 
     await state.update_data(last_bot_message_id=sent_message.message_id)
 
-    from db.models.models import Check, User
-    user = await User.get(tg_id=message.from_user.id)
-    await Check.create(
-        user_id=user.id,
-        type=data['expense_type'],
-        sum=int(data['rub_amount'])*100,
-        date=datetime.utcnow()
-    )
-
-
-# Обработка ввода суммы в рублях
-
-
 
 # Обработка нажатия кнопки "Назад"
 @router.callback_query(F.data == "back_foreign")
@@ -146,6 +147,3 @@ async def go_back(callback: types.CallbackQuery, state: FSMContext):
             "💵Введите сумму в валюте, в которой был произведен расход. Например: 100 USD, 50 EUR и т.д. 💱",
             reply_markup=keyboard
         )
-
-
-
