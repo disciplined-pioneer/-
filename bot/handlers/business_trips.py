@@ -42,13 +42,14 @@ async def predefined_expense_selected(callback: CallbackQuery, state: FSMContext
 # Обработка кнопки "Прочее"
 @router.callback_query(F.data == "expense_other")
 async def other_expense_selected(callback: types.CallbackQuery, state: FSMContext):
-    await bot.edit_message_text(
+    sent_message = await bot.edit_message_text(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text="Пожалуйста, введите название расхода:",
+        text=enter_expense_name_message,
         reply_markup=back_trips_keyboard
     )
     await state.set_state(BusinessTripState.waiting_for_expense_name)
+    await state.update_data(last_bot_message_id=sent_message.message_id)
 
     # Сохраняем callback, чтобы использовать его позже
     await state.update_data(callback=callback)
@@ -59,6 +60,21 @@ async def other_expense_selected(callback: types.CallbackQuery, state: FSMContex
 async def process_expense_name(message: types.Message, state: FSMContext):
 
     await message.delete()
+    data = await state.get_data()
+    last_bot_message_id = data.get("last_bot_message_id")
+
+    # Проверка сообщения на текст
+    if not message.text:
+        try:
+            await bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=last_bot_message_id,
+                text=enter_expense_name_error_message,
+                reply_markup=back_trips_keyboard
+            )
+        except:
+            pass
+        return
     
     # Получаем сохранённый callback
     expense_name = message.text
