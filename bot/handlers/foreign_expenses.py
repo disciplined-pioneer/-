@@ -99,7 +99,7 @@ async def process_rub_amount(message: types.Message, state: FSMContext):
     last_bot_message_id = data.get("last_bot_message_id")
 
     # Проверка данных на корректность
-    if not message.text.replace(".", "", 1).isdigit():
+    if not message.text.replace(".", "", 1).isdigit() or int(message.text) > MAX_INT32:
         try:
             await bot.edit_message_text(
                 chat_id=message.chat.id,

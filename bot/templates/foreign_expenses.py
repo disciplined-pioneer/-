@@ -7,6 +7,8 @@ class ExpenseState(StatesGroup):
     entering_rub_amount = State()
     confirming = State()
 
+MAX_INT32 = 2_147_483_647
+
 VALID_CURRENCIES = {"USD", "EUR", "GBP", "CNY", "JPY"}
 
 expense_type_message = "📝Пожалуйста, укажи тип расхода. Например: \"покупка\", \"услуга\", \"командировка\" и т.д. 💼"
