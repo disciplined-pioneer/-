@@ -290,7 +290,7 @@ async def back(callback: CallbackQuery, state: FSMContext):
 
     data = await state.get_data()
 
-    if data.get("callback_data") in ('expense_hotel_services', 'expense_other', 'expense_taxi'):
+    if data.get("callback_data") in ('expense_hotel_services', 'expense_other', 'expense_taxi', 'car'):
         message = check_added_text
         button = check_added_ikb()
         data['expense_type'] = data['type']

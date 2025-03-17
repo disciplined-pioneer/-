@@ -10,6 +10,8 @@ from datetime import datetime
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.state import StatesGroup, State
+
+from bot.templates.check import Checkphoto
 # from qreader import QReader
 
 from integrations.check_info import NalogRuPython
@@ -96,18 +98,23 @@ async def edit_prev_msg(data, bot: Bot, message, state: FSMContext):
 
 
 async def cmd_clear(message: Message, bot: Bot, report_id) -> None:
-    await bot.delete_messages(message.chat.id, list(range(max(1, message.message_id - 90, report_id + 1), message.message_id + 1)))
+    await bot.delete_messages(message.chat.id,
+                              list(range(max(1, message.message_id - 90, report_id + 1), message.message_id + 1)))
 
 
 @router.callback_query(F.data == 'var2')
 async def choose_expense(call: CallbackQuery, state: FSMContext):
     await state.set_state(ExpensesState.choose_expense)
+    await state.update_data(callback_data='car')
     try:
         await call.message.edit_text('Выберите тип расхода', reply_markup=expenses.as_markup())
     except Exception:
         await call.message.answer('Выберите тип расхода', reply_markup=expenses.as_markup())
 
-    await state.update_data(expense_type='Бензин и прочие расходы по автомобилю')
+    await state.update_data(
+        expense_type='Бензин и прочие расходы по автомобилю',
+        type='Бензин и прочие расходы по автомобилю'
+    )
 
 
 @router.callback_query(ExpensesState.choose_expense, F.data == 'ex5')
@@ -122,8 +129,12 @@ async def add_category(call: CallbackQuery, state: FSMContext):
 
 @router.message(ExpensesState.choose_other)
 async def handle_post(message: Message, state: FSMContext):
-    await state.update_data(ex_type=message.text)
-    await state.set_state(ExpensesState.load_check)
+    await state.update_data(
+        ex_type=message.text,
+        type=message.text
+    )
+    # await state.set_state(ExpensesState.load_check)
+    await state.set_state(Checkphoto.check)
     await message.answer('Отправьте фото чека, чтобы на нем было видно QR-код')
 
 
@@ -139,7 +150,8 @@ async def handle_post(message: Message, state: FSMContext):
 @router.callback_query(ExpensesState.choose_expense)
 async def load_check(call: CallbackQuery, state: FSMContext):
     await state.update_data(ex_type=call.data)
-    await state.set_state(ExpensesState.load_check)
+    # await state.set_state(ExpensesState.load_check)
+    await state.set_state(Checkphoto.check)
     try:
         await call.message.edit_text('Отправьте фото чека, чтобы на нем было видно QR-код')
     except Exception:
@@ -159,26 +171,26 @@ async def go_to_prev_check_input(call: CallbackQuery, state: FSMContext):
         await state.set_state(InputCheckState.input_date)
         try:
             msg = await call.message.edit_text('Введите дату с чека в формате: ДД.ММ.ГГГГ (например: 02.02.2020)',
-                                  reply_markup=input_check_back1.as_markup())
+                                               reply_markup=input_check_back1.as_markup())
         except Exception:
             msg = await call.message.answer('Введите дату с чека в формате: ДД.ММ.ГГГГ (например: 02.02.2020)',
-                                         reply_markup=input_check_back1.as_markup())
+                                            reply_markup=input_check_back1.as_markup())
     elif call.data == 'input_check_back3':
         await state.set_state(InputCheckState.input_time)
         try:
             msg = await call.message.edit_text('Введите время с чека в формате: ЧЧ:ММ (например: 15:30)',
-                             reply_markup=input_check_back2.as_markup())
+                                               reply_markup=input_check_back2.as_markup())
         except Exception:
             msg = await call.message.answer('Введите время с чека в формате: ЧЧ:ММ (например: 15:30)',
-                                         reply_markup=input_check_back2.as_markup())
+                                            reply_markup=input_check_back2.as_markup())
     elif call.data == 'input_check_back4':
         await state.set_state(InputCheckState.input_sum)
         try:
             msg = await call.message.edit_text('Введите сумму с чека например 157.00 (157 рублей 00 копеек)',
-                             reply_markup=input_check_back3.as_markup())
+                                               reply_markup=input_check_back3.as_markup())
         except Exception:
             msg = await call.message.answer('Введите сумму с чека например 157.00 (157 рублей 00 копеек)',
-                                         reply_markup=input_check_back3.as_markup())
+                                            reply_markup=input_check_back3.as_markup())
     elif call.data == 'input_check_back5':
         await state.set_state(InputCheckState.input_fn)
         try:
@@ -200,9 +212,10 @@ async def input_check_data(call: CallbackQuery, state: FSMContext):
     await state.set_state(InputCheckState.input_date)
     try:
         msg = await call.message.edit_text('Введите дату с чека в формате: ДД.ММ.ГГГГ (например: 02.02.2020)',
-                                  reply_markup=input_check_back1.as_markup())
+                                           reply_markup=input_check_back1.as_markup())
     except Exception:
-        msg = await call.message.answer('Введите дату с чека в формате: ДД.ММ.ГГГГ (например: 02.02.2020)', reply_markup=input_check_back1.as_markup())
+        msg = await call.message.answer('Введите дату с чека в формате: ДД.ММ.ГГГГ (например: 02.02.2020)',
+                                        reply_markup=input_check_back1.as_markup())
     await state.update_data(delkeyboard=msg.message_id)
 
 
@@ -215,20 +228,23 @@ async def input_check_time(message: Message, state: FSMContext, bot: Bot):
     date_text = message.text.strip()
 
     if not re.match(r"^\d{2}\.\d{2}\.\d{4}$", date_text):
-        msg = await message.reply("Неверный формат даты. Введите дату в формате: ДД.ММ.ГГГГ (например: 02.02.2020)", reply_markup=input_check_back1.as_markup())
+        msg = await message.reply("Неверный формат даты. Введите дату в формате: ДД.ММ.ГГГГ (например: 02.02.2020)",
+                                  reply_markup=input_check_back1.as_markup())
         await state.update_data(delkeyboard=msg.message_id)
         return
 
     try:
         datetime.strptime(date_text, "%d.%m.%Y")
     except ValueError:
-        msg = await message.reply("Некорректная дата. Проверьте правильность ввода и попробуйте снова.", reply_markup=input_check_back1.as_markup())
+        msg = await message.reply("Некорректная дата. Проверьте правильность ввода и попробуйте снова.",
+                                  reply_markup=input_check_back1.as_markup())
         await state.update_data(delkeyboard=msg.message_id)
         return
 
     await state.set_state(InputCheckState.input_time)
     await state.update_data(date=message.text)
-    msg = await message.answer('Введите время с чека в формате: ЧЧ:ММ (например: 15:30)', reply_markup=input_check_back2.as_markup())
+    msg = await message.answer('Введите время с чека в формате: ЧЧ:ММ (например: 15:30)',
+                               reply_markup=input_check_back2.as_markup())
     await state.update_data(delkeyboard=msg.message_id)
 
 
@@ -241,20 +257,23 @@ async def input_check_sum(message: Message, state: FSMContext, bot: Bot):
     time_text = message.text.strip()
 
     if not re.match(r"^\d{2}:\d{2}$", time_text):
-        msg = await message.reply("Неверный формат времени. Введите время в формате: ЧЧ:ММ (например: 15:30)", reply_markup=input_check_back2.as_markup())
+        msg = await message.reply("Неверный формат времени. Введите время в формате: ЧЧ:ММ (например: 15:30)",
+                                  reply_markup=input_check_back2.as_markup())
         await state.update_data(delkeyboard=msg.message_id)
         return
 
     try:
         datetime.strptime(time_text, "%H:%M")
     except ValueError:
-        msg = await message.reply("Некорректное время. Проверьте правильность ввода и попробуйте снова.", reply_markup=input_check_back2.as_markup())
+        msg = await message.reply("Некорректное время. Проверьте правильность ввода и попробуйте снова.",
+                                  reply_markup=input_check_back2.as_markup())
         await state.update_data(delkeyboard=msg.message_id)
         return
 
     await state.set_state(InputCheckState.input_sum)
     await state.update_data(time=message.text)
-    msg = await message.answer('Введите сумму с чека например 157.00 (157 рублей 00 копеек)', reply_markup=input_check_back3.as_markup())
+    msg = await message.answer('Введите сумму с чека например 157.00 (157 рублей 00 копеек)',
+                               reply_markup=input_check_back3.as_markup())
     await state.update_data(delkeyboard=msg.message_id)
 
 
@@ -274,7 +293,8 @@ async def input_check_fn(message: Message, state: FSMContext, bot: Bot):
 
     except ValueError:
         msg = await message.reply(
-            "Некорректный формат суммы. Введите сумму в виде целого числа или с двумя знаками после точки (например: 157 или 157.00).", reply_markup=input_check_back3.as_markup())
+            "Некорректный формат суммы. Введите сумму в виде целого числа или с двумя знаками после точки (например: 157 или 157.00).",
+            reply_markup=input_check_back3.as_markup())
         await state.update_data(delkeyboard=msg.message_id)
         return
 
@@ -293,7 +313,8 @@ async def input_check_fd(message: Message, state: FSMContext, bot: Bot):
     fn_text = message.text.strip()
 
     if not (fn_text.isdigit() and len(fn_text) == 16):
-        msg = await message.reply("Некорректный формат ФН. Убедитесь, что он состоит ровно из 16 цифр.", reply_markup=input_check_back4.as_markup())
+        msg = await message.reply("Некорректный формат ФН. Убедитесь, что он состоит ровно из 16 цифр.",
+                                  reply_markup=input_check_back4.as_markup())
         await state.update_data(delkeyboard=msg.message_id)
         return
 
@@ -312,7 +333,8 @@ async def input_check_fp(message: Message, state: FSMContext, bot: Bot):
     fd_text = message.text.strip()
 
     if not fd_text.isdigit():
-        msg = await message.reply("Некорректный формат ФД. Убедитесь, что он состоит из цифр.", reply_markup=input_check_back5.as_markup())
+        msg = await message.reply("Некорректный формат ФД. Убедитесь, что он состоит из цифр.",
+                                  reply_markup=input_check_back5.as_markup())
         await state.update_data(delkeyboard=msg.message_id)
         return
 
@@ -331,7 +353,8 @@ async def input_check_load_data(message: Message, state: FSMContext, bot: Bot):
     fp_text = message.text.strip()
 
     if not fp_text.isdigit():
-        msg = await message.reply("Некорректный формат ФП. Убедитесь, что он состоит из цифр.", reply_markup=input_check_back6.as_markup())
+        msg = await message.reply("Некорректный формат ФП. Убедитесь, что он состоит из цифр.",
+                                  reply_markup=input_check_back6.as_markup())
         await state.update_data(delkeyboard=msg.message_id)
         return
 
@@ -362,7 +385,9 @@ async def input_check_load_data(message: Message, state: FSMContext, bot: Bot):
 
     except Exception as e:
         try:
-            await message.edit_text("Не удалось получить информацию о чеке\nПроверьте введенные данные и попробуйте снова\nЛибо можете сформировать отчёт на основе введённых данных", reply_markup=check_failed.as_markup())
+            await message.edit_text(
+                "Не удалось получить информацию о чеке\nПроверьте введенные данные и попробуйте снова\nЛибо можете сформировать отчёт на основе введённых данных",
+                reply_markup=check_failed.as_markup())
         except Exception:
             await message.answer(
                 "Не удалось получить информацию о чеке\nПроверьте введенные данные и попробуйте снова\nЛибо можете сформировать отчёт на основе введённых данных",

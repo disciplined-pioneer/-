@@ -2,7 +2,7 @@ import os
 import math
 import locale
 import asyncio
-import comtypes.client
+# import comtypes.client
 from datetime import datetime, timedelta
 from utils.check import get_last_check_id
 
@@ -224,10 +224,11 @@ def update_last_row(table, data):
 
 
 def convert_docx_to_pdf(input_path, output_path):
-    word = comtypes.client.CreateObject("Word.Application")
-    word.Visible = False  # Запуск в фоне
-
-    doc = word.Documents.Open(os.path.abspath(input_path))
-    doc.SaveAs(os.path.abspath(output_path), FileFormat=17)  # 17 = wdFormatPDF
-    doc.Close()
-    word.Quit()
+    pass
+    # word = comtypes.client.CreateObject("Word.Application")
+    # word.Visible = False  # Запуск в фоне
+    #
+    # doc = word.Documents.Open(os.path.abspath(input_path))
+    # doc.SaveAs(os.path.abspath(output_path), FileFormat=17)  # 17 = wdFormatPDF
+    # doc.Close()
+    # word.Quit()
