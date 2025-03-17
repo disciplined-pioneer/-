@@ -29,6 +29,9 @@ async def cmd_start(message: Message, state: FSMContext):
     :param message:
     :param state:
     """
+
+    await state.clear()
+
     if not await User.get(tg_id=message.from_user.id):
         last_msg = await message.answer(tauth.start_text)
         await message.delete()
@@ -55,6 +58,7 @@ async def return_to_menu(call: CallbackQuery, state: FSMContext):
     :param call:
     :param state:
     """
+    await state.clear()
     data = await state.get_data()
     await bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                         reply_markup=None)

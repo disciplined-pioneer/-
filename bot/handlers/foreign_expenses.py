@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
@@ -9,6 +10,8 @@ from db.models.models import Check, User
 
 
 router = Router()
+
+VALID_CURRENCIES = {"USD", "EUR", "GBP", "CNY", "JPY"}
 
 
 # Обработка начала ввода расхода в иностранной валюте
@@ -29,11 +32,10 @@ async def start_expense(callback: types.CallbackQuery, state: FSMContext):
 # Обработка ввода типа расхода
 @router.message(ExpenseState.choosing_type)
 async def process_expense_type(message: types.Message, state: FSMContext):
+
+    await message.delete() 
     await state.update_data(expense_type=message.text)
     await state.set_state(ExpenseState.entering_foreign_amount)
-
-    keyboard = await get_back_keyboard()
-    await message.delete()  # Удаляем сообщение пользователя
 
     data = await state.get_data()
     last_bot_message_id = data.get("last_bot_message_id")
@@ -43,7 +45,7 @@ async def process_expense_type(message: types.Message, state: FSMContext):
         chat_id=message.chat.id,
         message_id=last_bot_message_id,
         text="💵Введите сумму в валюте, в которой был произведен расход. Например: 100 USD, 50 EUR и т.д. 💱",
-        reply_markup=keyboard
+        reply_markup=await get_back_keyboard()
     )
 
     # Обновляем ID последнего сообщения бота
@@ -53,26 +55,85 @@ async def process_expense_type(message: types.Message, state: FSMContext):
 # Обработка ввода суммы в иностранной валюте
 @router.message(ExpenseState.entering_foreign_amount)
 async def process_foreign_amount(message: types.Message, state: FSMContext):
-    await state.update_data(foreign_amount=message.text)
-    await state.set_state(ExpenseState.entering_rub_amount)
 
-    keyboard = await get_back_keyboard()
-    await message.delete()  # Удаляем сообщение пользователя
-
+    await message.delete()
     data = await state.get_data()
     last_bot_message_id = data.get("last_bot_message_id")
+
+    # Обработка на корректный ввод
+    match = re.match(r"^(\d+(\.\d+)?)\s([A-Z]{3})$", message.text.upper())
+    if not match or match.group(3) not in VALID_CURRENCIES:
+        try:
+            await bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=last_bot_message_id,
+                text='❌ Некорректный формат. Используйте: "100 USD" или "50 EUR"',
+                reply_markup=await get_back_keyboard()
+            )
+        except:
+            pass
+
+        return
+
+    await state.update_data(foreign_amount=message.text.upper())
+    await state.set_state(ExpenseState.entering_rub_amount)
 
     sent_message = await bot.edit_message_text(
         chat_id=message.chat.id,
         message_id=last_bot_message_id,
-        text="💲Сумма в рублях для включения в отчет:\n"
-             "Пожалуйста, укажи сумму в рублях, которая будет включена в отчет. (Используй курс ЦБ на дату расхода) 📊",
-        reply_markup=keyboard
+        text = (
+            "💲 Сумма в рублях для включения в отчет:\n"
+            "Пожалуйста, укажите сумму в рублях, которая будет включена в отчет ( Например: 7500.50 )\n"
+            "Пересчитайте ее по курсу ЦБ на дату расхода 📊"
+        ),
+        reply_markup=await get_back_keyboard()
     )
 
     await state.update_data(last_bot_message_id=sent_message.message_id)
 
 
+# Обработка ввода суммы в рублях
+@router.message(ExpenseState.entering_rub_amount)
+async def process_rub_amount(message: types.Message, state: FSMContext):
+
+    await message.delete()
+    data = await state.get_data()
+    last_bot_message_id = data.get("last_bot_message_id")
+
+    # Проверка данных на корректность
+    if not message.text.replace(".", "", 1).isdigit():
+        try:
+            await bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=last_bot_message_id,
+                text="❌ Некорректная сумма. Введите число, например: 7500.50",
+                reply_markup=await get_back_keyboard()
+            )
+        except:
+            pass
+        return
+
+    await state.update_data(rub_amount=message.text)
+    await state.set_state(ExpenseState.confirming)
+
+    data = await state.get_data()
+    sent_message = await bot.edit_message_text(
+        chat_id=message.chat.id,
+        message_id=last_bot_message_id,
+        text=(
+            f"📝Данные по расходу\n"
+            f"Тип расхода: {data['expense_type']}\n"
+            f"Сумма в валюте документа: {data['foreign_amount']}\n"
+            f"Сумма в рублях для включения в отчет: {data['rub_amount']}\n\n"
+            "Пожалуйста, проверьте информацию выше"
+        ),
+        reply_markup=await get_confirm_keyboard()
+    )
+
+    await state.update_data(last_bot_message_id=sent_message.message_id)
+
+
+# Обработка кнопки "✅ Подтвердить"
 @router.callback_query(F.data == "confirm_foreign")
 async def confirm_expense(callback: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
@@ -99,34 +160,6 @@ async def confirm_expense(callback: types.CallbackQuery, state: FSMContext):
     )
     
     await state.clear()
-
-
-# Обработка ввода суммы в рублях
-@router.message(ExpenseState.entering_rub_amount)
-async def process_rub_amount(message: types.Message, state: FSMContext):
-    await state.update_data(rub_amount=message.text)
-    await state.set_state(ExpenseState.confirming)
-
-    keyboard = await get_confirm_keyboard()
-    await message.delete()  # Удаляем сообщение пользователя
-
-    data = await state.get_data()
-    last_bot_message_id = data.get("last_bot_message_id")
-
-    sent_message = await bot.edit_message_text(
-        chat_id=message.chat.id,
-        message_id=last_bot_message_id,
-        text=(
-            f"📝Данные по расходу\n"
-            f"Тип расхода: {data['expense_type']}\n"
-            f"Сумма в валюте документа: {data['foreign_amount']}\n"
-            f"Сумма в рублях для включения в отчет: {data['rub_amount']}\n\n"
-            "Пожалуйста, проверьте информацию выше"
-        ),
-        reply_markup=keyboard
-    )
-
-    await state.update_data(last_bot_message_id=sent_message.message_id)
 
 
 # Обработка нажатия кнопки "Назад"
