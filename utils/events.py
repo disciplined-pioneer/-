@@ -210,7 +210,6 @@ def add_row_with_borders(table, data):
         set_cell_border(cell)  # Устанавливаем границы
 
 
-
 # Функция для изменения данных последней строки таблицы
 def update_last_row(table, data):
     last_row = table.rows[-1]  # Получаем последнюю строку
@@ -222,6 +221,8 @@ def update_last_row(table, data):
                 run.font.size = Pt(11)  # Устанавливаем размер шрифта
         set_cell_border(cell)  # Устанавливаем границы
 
+
+# Конвертация word в pdf
 def convert_docx_to_pdf(input_path, output_path):
     word = comtypes.client.CreateObject("Word.Application")
     word.Visible = False  # Запуск в фоне
