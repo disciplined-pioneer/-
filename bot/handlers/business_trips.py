@@ -45,7 +45,8 @@ async def other_expense_selected(callback: types.CallbackQuery, state: FSMContex
     await bot.edit_message_text(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text="Пожалуйста, введите название расхода:"
+        text="Пожалуйста, введите название расхода:",
+        reply_markup=back_trips_keyboard
     )
     await state.set_state(BusinessTripState.waiting_for_expense_name)
 
@@ -73,3 +74,9 @@ async def process_expense_name(message: types.Message, state: FSMContext):
         await state.update_data(answers_check=answers_check,
                                 type=expense_name)
         await handle_entertainment(callback, state)
+
+
+# Обработка кнопки ⬅️ Назад
+@router.callback_query(F.data == "back_to_business_trips")
+async def back_to_business_trips(callback: CallbackQuery, state: FSMContext):
+    await business_trips_start(callback, state)

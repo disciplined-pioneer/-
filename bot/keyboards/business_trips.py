@@ -8,3 +8,9 @@ consumption_type_keyboard = InlineKeyboardMarkup(
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="start")]
     ]
 )
+
+back_trips_keyboard = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_business_trips")]
+    ]
+)

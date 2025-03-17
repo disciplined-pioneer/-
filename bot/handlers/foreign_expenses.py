@@ -11,8 +11,6 @@ from db.models.models import Check, User
 
 router = Router()
 
-VALID_CURRENCIES = {"USD", "EUR", "GBP", "CNY", "JPY"}
-
 
 # Обработка начала ввода расхода в иностранной валюте
 @router.callback_query(F.data == "expense_foreign_currency")
@@ -21,7 +19,7 @@ async def start_expense(callback: types.CallbackQuery, state: FSMContext):
     
     # Отправляем новое сообщение и сохраняем его ID
     sent_message = await callback.message.edit_text(
-        "📝Пожалуйста, укажи тип расхода. Например: \"покупка\", \"услуга\", \"командировка\" и т.д. 💼",
+        expense_type_message,
         reply_markup=start
     )
     
@@ -44,7 +42,7 @@ async def process_expense_type(message: types.Message, state: FSMContext):
     sent_message = await bot.edit_message_text(
         chat_id=message.chat.id,
         message_id=last_bot_message_id,
-        text="💵Введите сумму в валюте, в которой был произведен расход. Например: 100 USD, 50 EUR и т.д. 💱",
+        text=foreign_amount_message,
         reply_markup=await get_back_keyboard()
     )
 
@@ -67,7 +65,7 @@ async def process_foreign_amount(message: types.Message, state: FSMContext):
             await bot.edit_message_text(
                 chat_id=message.chat.id,
                 message_id=last_bot_message_id,
-                text='❌ Некорректный формат. Используйте: "100 USD" или "50 EUR"',
+                text=incorrect_format_message,
                 reply_markup=await get_back_keyboard()
             )
         except:
@@ -106,7 +104,7 @@ async def process_rub_amount(message: types.Message, state: FSMContext):
             await bot.edit_message_text(
                 chat_id=message.chat.id,
                 message_id=last_bot_message_id,
-                text="❌ Некорректная сумма. Введите число, например: 7500.50",
+                text=incorrect_amount_message,
                 reply_markup=await get_back_keyboard()
             )
         except:
@@ -120,13 +118,7 @@ async def process_rub_amount(message: types.Message, state: FSMContext):
     sent_message = await bot.edit_message_text(
         chat_id=message.chat.id,
         message_id=last_bot_message_id,
-        text=(
-            f"📝Данные по расходу\n"
-            f"Тип расхода: {data['expense_type']}\n"
-            f"Сумма в валюте документа: {data['foreign_amount']}\n"
-            f"Сумма в рублях для включения в отчет: {data['rub_amount']}\n\n"
-            "Пожалуйста, проверьте информацию выше"
-        ),
+        text=generate_expense_summary(data),
         reply_markup=await get_confirm_keyboard()
     )
 
@@ -153,9 +145,7 @@ async def confirm_expense(callback: types.CallbackQuery, state: FSMContext):
     
     # Редактируем предыдущее сообщение вместо удаления
     await callback.message.edit_text(
-        "🎉 Ваш расход успешно добавлен в отчет! 🎉\n\n"
-        "Вы можете продолжить заполнение авансового отчета, добавив другие виды расходов.\n"
-        "Хотите добавить новый тип расхода в существующий отчет?",
+        expense_added_message,
         reply_markup=keyboard
     )
     
@@ -170,13 +160,12 @@ async def go_back(callback: types.CallbackQuery, state: FSMContext):
 
     if current_state == ExpenseState.entering_foreign_amount:
         await state.set_state(ExpenseState.choosing_type)
-        await callback.message.edit_text(
-            "📝Пожалуйста, укажи тип расхода. Например: \"покупка\", \"услуга\", \"командировка\" и т.д. 💼"
-        )
+        await callback.message.edit_text(expense_type_message)
+
     elif current_state == ExpenseState.entering_rub_amount:
         keyboard = await get_back_keyboard()
         await state.set_state(ExpenseState.entering_foreign_amount)
         await callback.message.edit_text(
-            "💵Введите сумму в валюте, в которой был произведен расход. Например: 100 USD, 50 EUR и т.д. 💱",
+            foreign_amount_message,
             reply_markup=keyboard
         )
