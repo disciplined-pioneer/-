@@ -4,6 +4,17 @@ WORKDIR /bot
 
 COPY requirements.txt .
 
+RUN apt-get update -y && apt-get install -y \
+    libreoffice \
+    libgl1-mesa-glx \
+    libzbar0 \
+    wkhtmltopdf \
+    pandoc \
+    texlive-xetex \
+    texlive-fonts-recommended \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN apt-get -y update
 RUN apt-get install -y libgl1-mesa-glx libzbar0 wkhtmltopdf
 

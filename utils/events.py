@@ -1,8 +1,7 @@
 import os
 import math
 import locale
-import asyncio
-import comtypes.client
+import subprocess
 from datetime import datetime, timedelta
 from utils.check import get_last_check_id
 
@@ -223,11 +222,40 @@ def update_last_row(table, data):
 
 
 # Конвертация word в pdf
-def convert_docx_to_pdf(input_path, output_path):
-    word = comtypes.client.CreateObject("Word.Application")
-    word.Visible = False  # Запуск в фоне
+def convert_docx_to_pdf(input_file, output_file):
+
+    # Проверка, что входной файл существует
+    if not os.path.isfile(input_file):
+        print(f"Файл {input_file} не найден.")
+        return
+
+    # Папка, где будет сохранён файл
+    output_dir = os.path.dirname(output_file)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # Строим команду для LibreOffice
+    command = [
+        "libreoffice",
+        "--headless",
+        "--convert-to", 
+        "pdf",
+        input_file,
+        "--outdir", 
+        output_dir
+    ]
     
-    doc = word.Documents.Open(os.path.abspath(input_path))
-    doc.SaveAs(os.path.abspath(output_path), FileFormat=17)  # 17 = wdFormatPDF
-    doc.Close()
-    word.Quit()
+    try:
+        # Запуск команды
+        subprocess.run(command, check=True)
+
+        # Получаем имя выходного файла
+        output_pdf = os.path.join(output_dir, os.path.basename(input_file).replace(".docx", ".pdf"))
+
+        # Переименовываем файл
+        if output_pdf != output_file:
+            os.rename(output_pdf, output_file)
+
+        print(f"Файл успешно конвертирован в PDF: {output_file}")
+    except subprocess.CalledProcessError as e:
+        print(f"Ошибка при конвертации: {e}")
